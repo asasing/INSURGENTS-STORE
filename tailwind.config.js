@@ -6,16 +6,20 @@ export default {
     extend: {
       colors: {
         primary: {
-          light: '#3b82f6',
-          dark: '#60a5fa'
+          light: '#000000', // Black for light mode
+          dark: '#ffffff'   // White for dark mode
         },
         background: {
-          light: '#ffffff',
-          dark: '#0f172a'
+          light: '#ffffff',    // White background
+          dark: '#0a0a0a'      // Near-black for dark mode
         },
         text: {
-          light: '#1f2937',
-          dark: '#f3f4f6'
+          light: '#171717',    // Near-black text
+          dark: '#f5f5f5'      // Off-white text
+        },
+        accent: {
+          light: '#404040',    // Dark gray accent
+          dark: '#d4d4d4'      // Light gray accent
         }
       }
     },

@@ -35,10 +35,52 @@ export async function getProducts(filters = {}) {
       query = query.eq('is_featured', true)
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false })
+    // Apply sorting
+    const sortBy = filters.sortBy || 'latest'
+
+    if (sortBy === 'latest') {
+      query = query.order('created_at', { ascending: false })
+    } else if (sortBy === 'name') {
+      query = query.order('name', { ascending: true })
+    } else if (sortBy === 'price-low') {
+      // Sort by sale_price if exists, otherwise price
+      query = query.order('price', { ascending: true })
+    } else if (sortBy === 'price-high') {
+      query = query.order('price', { ascending: false })
+    }
+
+    // Apply limit if specified (for new arrivals)
+    if (filters.limit) {
+      query = query.limit(filters.limit)
+    }
+
+    const { data, error } = await query
 
     if (error) throw error
-    return data
+
+    // Calculate discount percentage and sort by discount if needed
+    let products = data.map(product => ({
+      ...product,
+      discountPercent: product.sale_price
+        ? Math.round(((product.price - product.sale_price) / product.price) * 100)
+        : 0
+    }))
+
+    // Client-side sorting for discount (can't do in SQL easily)
+    if (sortBy === 'discount') {
+      products = products.sort((a, b) => b.discountPercent - a.discountPercent)
+    }
+
+    // For price sorting, use sale_price if available
+    if (sortBy === 'price-low' || sortBy === 'price-high') {
+      products = products.sort((a, b) => {
+        const priceA = a.sale_price || a.price
+        const priceB = b.sale_price || b.price
+        return sortBy === 'price-low' ? priceA - priceB : priceB - priceA
+      })
+    }
+
+    return products
   } catch (error) {
     console.error('Error fetching products:', error)
     throw error

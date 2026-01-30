@@ -15,24 +15,6 @@ function Home() {
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-800 dark:from-blue-800 dark:to-blue-900 text-white py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4">
-            Insurgents Store
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 text-blue-100">
-            Premium Shoes & Apparel for Every Lifestyle
-          </p>
-          <a
-            href="#featured"
-            className="inline-block bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
-          >
-            Shop Now
-          </a>
-        </div>
-      </section>
-
       {/* On Sale Section */}
       {onSaleProducts && onSaleProducts.length > 0 && (
         <section className="py-16 bg-yellow-50 dark:bg-gray-800">
@@ -113,24 +95,6 @@ function Home() {
           </div>
         </section>
       )}
-
-      {/* CTA Section */}
-      <section className="py-16 bg-blue-600 dark:bg-blue-800 text-white">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Ready to Upgrade Your Style?
-          </h2>
-          <p className="text-xl mb-8 text-blue-100">
-            Browse our full collection and find your perfect match
-          </p>
-          <a
-            href="/category/top-selling"
-            className="inline-block bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
-          >
-            View All Products
-          </a>
-        </div>
-      </section>
     </div>
   )
 }

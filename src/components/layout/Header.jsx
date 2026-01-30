@@ -1,15 +1,22 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, ShoppingCart } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import ThemeToggle from './ThemeToggle'
 import Navigation from './Navigation'
 import MobileMenu from './MobileMenu'
 import { useCartStore } from '../../store/cartStore'
+import { getSettings } from '../../services/settings'
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const items = useCartStore((state) => state.items)
   const cartCount = items.reduce((total, item) => total + item.quantity, 0)
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: getSettings
+  })
 
   return (
     <>
@@ -25,8 +32,18 @@ export default function Header() {
                 <Menu className="w-6 h-6" />
               </button>
 
-              <Link to="/" className="text-2xl font-bold text-gray-900 dark:text-white">
-                Insurgents
+              <Link to="/" className="flex items-center">
+                {settings?.site_logo_url ? (
+                  <img
+                    src={settings.site_logo_url}
+                    alt={settings?.site_name || 'Store Logo'}
+                    className="h-10 object-contain"
+                  />
+                ) : (
+                  <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {settings?.site_name || 'Insurgents'}
+                  </span>
+                )}
               </Link>
             </div>
 

@@ -1,8 +1,10 @@
 import { supabase } from '../lib/supabase'
 
-const BUCKET_NAME = 'product-images'
+// Use AssetsYour bucket for logo and other assets
+const ASSETS_BUCKET = 'AssetsYour'
+const PRODUCT_IMAGES_BUCKET = 'product-images'
 
-export async function uploadImage(file, path = '') {
+export async function uploadImage(file, path = '', bucket = PRODUCT_IMAGES_BUCKET) {
   try {
     // Generate unique filename
     const fileExt = file.name.split('.').pop()
@@ -10,7 +12,7 @@ export async function uploadImage(file, path = '') {
     const filePath = path ? `${path}/${fileName}` : fileName
 
     const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucket)
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false
@@ -20,7 +22,7 @@ export async function uploadImage(file, path = '') {
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucket)
       .getPublicUrl(filePath)
 
     return {
@@ -34,10 +36,15 @@ export async function uploadImage(file, path = '') {
   }
 }
 
-export async function deleteImage(filePath) {
+// Specific function for uploading assets like logos
+export async function uploadAsset(file, path = '') {
+  return uploadImage(file, path, ASSETS_BUCKET)
+}
+
+export async function deleteImage(filePath, bucket = PRODUCT_IMAGES_BUCKET) {
   try {
     const { error } = await supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucket)
       .remove([filePath])
 
     if (error) throw error
@@ -58,11 +65,11 @@ export async function uploadMultipleImages(files, path = '') {
   }
 }
 
-export function getImageUrl(filePath) {
+export function getImageUrl(filePath, bucket = PRODUCT_IMAGES_BUCKET) {
   if (!filePath) return null
 
   const { data: { publicUrl } } = supabase.storage
-    .from(BUCKET_NAME)
+    .from(bucket)
     .getPublicUrl(filePath)
 
   return publicUrl

@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Package, ShoppingCart, MessageSquare, Timer, LayoutDashboard, LogOut } from 'lucide-react'
+import { Package, ShoppingCart, MessageSquare, Timer, LayoutDashboard, LogOut, Settings } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import ThemeToggle from './ThemeToggle'
 import toast from 'react-hot-toast'
@@ -9,7 +9,8 @@ const menuItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/inventory', label: 'Inventory', icon: Package },
   { path: '/admin/sales', label: 'Sales', icon: Timer },
-  { path: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare }
+  { path: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
+  { path: '/admin/settings', label: 'Settings', icon: Settings }
 ]
 
 export default function AdminLayout({ children }) {
@@ -48,7 +49,7 @@ export default function AdminLayout({ children }) {
                   className={cn(
                     'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors',
                     isActive
-                      ? 'bg-blue-600 text-white dark:bg-blue-500'
+                      ? 'bg-black text-white dark:bg-white dark:text-black'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   )}
                 >

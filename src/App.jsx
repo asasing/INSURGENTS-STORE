@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Home from './pages/Home'
+import Category from './pages/Category'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import OrderConfirmation from './pages/OrderConfirmation'
@@ -8,6 +9,7 @@ import Dashboard from './pages/admin/Dashboard'
 import Inventory from './pages/admin/Inventory'
 import SaleManager from './pages/admin/SaleManager'
 import Testimonials from './pages/admin/Testimonials'
+import Settings from './pages/admin/Settings'
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
 import SaleTimer from './components/product/SaleTimer'
@@ -27,6 +29,21 @@ function App() {
               <SaleTimer />
               <main className="flex-1">
                 <Home />
+              </main>
+              <Footer />
+            </div>
+          }
+        />
+
+        {/* Category Route */}
+        <Route
+          path="/category/:slug"
+          element={
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <SaleTimer />
+              <main className="flex-1">
+                <Category />
               </main>
               <Footer />
             </div>
@@ -109,6 +126,16 @@ function App() {
             <ProtectedRoute>
               <AdminLayout>
                 <Testimonials />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <Settings />
               </AdminLayout>
             </ProtectedRoute>
           }

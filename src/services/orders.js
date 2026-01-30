@@ -80,11 +80,18 @@ export function generateMayaPaymentLink(order) {
     return null
   }
 
+  // Build detailed description with items
+  const itemsList = order.items.map(item =>
+    `${item.name} (x${item.quantity}) - ₱${(item.price * item.quantity).toFixed(2)}`
+  ).join(', ')
+
+  const fullDescription = `Order ${order.id.substring(0, 8)} | Items: ${itemsList} | Total: ₱${order.total.toFixed(2)}`
+
   // Append order details as URL parameters
   const params = new URLSearchParams({
     amount: order.total.toFixed(2),
     reference: order.id,
-    description: `Order ${order.id.substring(0, 8)}`,
+    description: fullDescription.substring(0, 500), // Limit length for URL
     customer_name: order.customer_name,
     customer_email: order.customer_email
   })
