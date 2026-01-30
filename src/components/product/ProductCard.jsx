@@ -41,19 +41,25 @@ export default function ProductCard({ product }) {
     setSelectedSize(e.target.value)
   }
 
-  const imageUrl = product.images?.[0]?.url || '/placeholder-product.jpg'
+  const imageUrl = product.images?.[0]?.url
 
   return (
     <Link to={`/product/${product.id}`}>
       <Card className="group hover:shadow-xl transition-all duration-300 overflow-hidden h-full flex flex-col">
         {/* Image Container */}
         <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700 rounded-md mb-3">
-          <img
-            src={imageUrl}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-            loading="lazy"
-          />
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={product.name}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+              <span className="text-gray-400 dark:text-gray-500 text-sm">No Image</span>
+            </div>
+          )}
 
           {/* Sale Badge */}
           {isOnSale && discount > 0 && (

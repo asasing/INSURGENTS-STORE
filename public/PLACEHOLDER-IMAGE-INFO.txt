@@ -1,0 +1,17 @@
+PLACEHOLDER IMAGE NEEDED
+========================
+
+You need to add a placeholder image for products without images.
+
+Required file: placeholder-product.jpg
+Location: public/placeholder-product.jpg
+Recommended size: 800x800 pixels (square)
+
+You can:
+1. Create a simple gray square with text "No Image"
+2. Use an online placeholder generator like:
+   - https://placeholder.com/
+   - https://via.placeholder.com/800x800.png?text=Product+Image
+3. Download and rename any placeholder image
+
+For now, the app will show a gray box if this file is missing.
