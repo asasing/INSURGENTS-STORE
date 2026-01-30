@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Facebook, Instagram, Mail } from 'lucide-react'
+import AnalyticsToggle from '../common/AnalyticsToggle'
 
 export default function Footer() {
   return (
@@ -80,8 +81,13 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800 text-center text-sm text-gray-600 dark:text-gray-400">
-          © {new Date().getFullYear()} Insurgents Store. All rights reserved.
+        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-800">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left text-sm text-gray-600 dark:text-gray-400">
+              © {new Date().getFullYear()} Insurgents Store. All rights reserved.
+            </div>
+            <AnalyticsToggle />
+          </div>
         </div>
       </div>
     </footer>

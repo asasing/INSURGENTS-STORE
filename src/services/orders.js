@@ -117,8 +117,27 @@ export async function createMayaCheckoutSession(order) {
       }
     }
 
-    const checkout = await createMayaCheckout(checkoutData)
-    return checkout
+    try {
+      // Try Maya Checkout API first
+      const checkout = await createMayaCheckout(checkoutData)
+      return checkout
+    } catch (checkoutError) {
+      // If K004 error (endpoint not available), fall back to Payment Link
+      if (checkoutError.message?.includes('K004') || checkoutError.message?.includes('Invalid endpoint')) {
+        console.warn('⚠️ Maya Checkout API not available yet. Falling back to Payment Link.')
+        console.warn('💡 Complete your Maya Checkout application setup at https://business.maya.ph/')
+
+        const paymentLink = generateMayaPaymentLink(order)
+        if (paymentLink) {
+          return {
+            checkoutId: null,
+            redirectUrl: paymentLink,
+            fallbackMode: true
+          }
+        }
+      }
+      throw checkoutError
+    }
   } catch (error) {
     console.error('Error creating Maya checkout session:', error)
     throw error

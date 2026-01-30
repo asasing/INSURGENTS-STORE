@@ -1,19 +1,19 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ShoppingCart } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ShoppingCart, Zap } from 'lucide-react'
 import Card from '../common/Card'
 import Button from '../common/Button'
 import PriceDisplay from './PriceDisplay'
 import { useCartStore } from '../../store/cartStore'
 import toast from 'react-hot-toast'
 import { calculateSalePercentage } from '../../lib/utils'
-
-// Size options
-const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Free Size']
-const SHOE_SIZES_EU = [35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]
+import { useAnalytics } from '../../lib/analytics'
+import { APPAREL_SIZES, SHOE_SIZES_EU } from '../../lib/sizeConversion'
 
 export default function ProductCard({ product }) {
   const addItem = useCartStore((state) => state.addItem)
+  const navigate = useNavigate()
+  const analytics = useAnalytics()
   const [selectedSize, setSelectedSize] = useState('')
 
   const isOnSale = product.sale_price && product.sale_price < product.price
@@ -21,18 +21,71 @@ export default function ProductCard({ product }) {
   const isApparel = product.category?.slug === 'apparels'
   const sizeOptions = isApparel ? APPAREL_SIZES : SHOE_SIZES_EU
 
+  // Check if a size is available
+  const isSizeAvailable = (size) => {
+    // If product is out of stock, no sizes are available
+    if (product.stock_quantity === 0) return false
+
+    // If sizes field exists and has stock info
+    if (product.sizes && Array.isArray(product.sizes)) {
+      // Check if sizes are objects with stock property
+      const sizeData = product.sizes.find(s => {
+        if (typeof s === 'object') {
+          return s.size === size || s.value === size || s.name === size
+        }
+        return s === size
+      })
+
+      // If size has stock property, check it
+      if (sizeData && typeof sizeData === 'object' && 'stock' in sizeData) {
+        return sizeData.stock > 0
+      }
+
+      // If size exists in array (as string or object without stock), it's available
+      return !!sizeData
+    }
+
+    // Default: all sizes available if product has stock
+    return product.stock_quantity > 0
+  }
+
   const handleAddToCart = (e) => {
     e.preventDefault()
     e.stopPropagation()
 
     if (!selectedSize) {
       toast.error('Please select a size')
+      analytics.trackButtonClick('add_to_cart_no_size', 'product_card', { product_id: product.id })
       return
     }
 
     addItem(product, 1, selectedSize)
+    analytics.trackAddToCart(product, 1, selectedSize)
+    analytics.trackButtonClick('add_to_cart', 'product_card', {
+      product_id: product.id,
+      size: selectedSize
+    })
     toast.success(`${product.name} (${isApparel ? selectedSize : `EU ${selectedSize}`}) added to cart`)
     setSelectedSize('') // Reset size after adding
+  }
+
+  const handleBuyNow = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!selectedSize) {
+      toast.error('Please select a size')
+      analytics.trackButtonClick('buy_now_no_size', 'product_card', { product_id: product.id })
+      return
+    }
+
+    addItem(product, 1, selectedSize)
+    analytics.trackBuyNow(product, selectedSize)
+    analytics.trackButtonClick('buy_now', 'product_card', {
+      product_id: product.id,
+      size: selectedSize
+    })
+    navigate('/checkout')
   }
 
   const handleSizeChange = (e) => {
@@ -101,22 +154,44 @@ export default function ProductCard({ product }) {
               <option value="">
                 {isApparel ? 'Select Size' : 'Select Size (EU)'}
               </option>
-              {sizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {isApparel ? size : `EU ${size}`}
-                </option>
-              ))}
+              {sizeOptions.map((size) => {
+                const available = isSizeAvailable(size)
+                return (
+                  <option
+                    key={size}
+                    value={size}
+                    disabled={!available}
+                    className={!available ? 'text-gray-400 dark:text-gray-500' : ''}
+                  >
+                    {isApparel ? size : `EU ${size}`}{!available ? ' (Out of Stock)' : ''}
+                  </option>
+                )
+              })}
             </select>
 
-            <Button
-              onClick={handleAddToCart}
-              disabled={product.stock_quantity === 0}
-              className="w-full mt-2 flex items-center justify-center gap-2"
-              size="sm"
-            >
-              <ShoppingCart className="w-4 h-4" />
-              Add to Cart
-            </Button>
+            {/* Action Buttons */}
+            <div className="flex gap-2 mt-2">
+              <Button
+                onClick={handleAddToCart}
+                disabled={product.stock_quantity === 0}
+                variant="secondary"
+                className="flex-1 flex items-center justify-center gap-2"
+                size="sm"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                Add
+              </Button>
+
+              <Button
+                onClick={handleBuyNow}
+                disabled={product.stock_quantity === 0}
+                className="flex-1 flex items-center justify-center gap-2"
+                size="sm"
+              >
+                <Zap className="w-4 h-4" />
+                Buy Now
+              </Button>
+            </div>
           </div>
         </div>
       </Card>

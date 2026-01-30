@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -12,6 +12,7 @@ import Card from '../components/common/Card'
 import LoadingModal from '../components/common/LoadingModal'
 import { formatPrice } from '../lib/utils'
 import toast from 'react-hot-toast'
+import { useAnalytics } from '../lib/analytics'
 
 const checkoutSchema = z.object({
   customerName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -27,6 +28,7 @@ export default function Checkout() {
   const navigate = useNavigate()
   const { items, getTotal, clearCart } = useCartStore()
   const [loading, setLoading] = useState(false)
+  const analytics = useAnalytics()
 
   const {
     register,
@@ -37,6 +39,15 @@ export default function Checkout() {
   })
 
   const total = getTotal()
+
+  // Track checkout started when page loads
+  useEffect(() => {
+    analytics.trackCheckoutStarted(items, total)
+    analytics.trackButtonClick('checkout_page_loaded', 'checkout', {
+      items_count: items.length,
+      total
+    })
+  }, [])
 
   if (items.length === 0) {
     navigate('/cart')
@@ -73,19 +84,35 @@ export default function Checkout() {
       try {
         const checkout = await createMayaCheckoutSession(order)
 
+        // Track purchase
+        analytics.trackPurchase(order)
+        analytics.trackButtonClick('place_order_success', 'checkout', {
+          order_id: order.id,
+          total: order.total,
+          fallback_mode: checkout.fallbackMode
+        })
+
         // Clear cart
         clearCart()
 
         // Show success message
-        toast.success('Order created! Redirecting to payment...')
+        if (checkout.fallbackMode) {
+          toast.success('Order created! Redirecting to Maya payment...\n(Using payment link - Checkout API setup pending)')
+        } else {
+          toast.success('Order created! Redirecting to payment...')
+        }
 
-        // Redirect to Maya checkout
+        // Redirect to Maya checkout or payment link
         setTimeout(() => {
           window.location.href = checkout.redirectUrl
         }, 1000)
       } catch (mayaError) {
         // If Maya checkout fails, still show order confirmation
         console.error('Maya checkout error:', mayaError)
+        analytics.trackButtonClick('place_order_maya_error', 'checkout', {
+          order_id: order.id,
+          error: mayaError.message
+        })
         clearCart()
         toast.error('Payment gateway error. Please contact support with your order ID.')
         navigate(`/order-confirmation/${order.id}`)

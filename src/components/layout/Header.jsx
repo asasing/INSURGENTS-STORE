@@ -7,11 +7,13 @@ import Navigation from './Navigation'
 import MobileMenu from './MobileMenu'
 import { useCartStore } from '../../store/cartStore'
 import { getSettings } from '../../services/settings'
+import { useAnalytics } from '../../lib/analytics'
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const items = useCartStore((state) => state.items)
   const cartCount = items.reduce((total, item) => total + item.quantity, 0)
+  const analytics = useAnalytics()
 
   const { data: settings } = useQuery({
     queryKey: ['settings'],
@@ -26,13 +28,20 @@ export default function Header() {
             {/* Logo & Mobile Menu Toggle */}
             <div className="flex items-center gap-4">
               <button
-                onClick={() => setMobileMenuOpen(true)}
+                onClick={() => {
+                  setMobileMenuOpen(true)
+                  analytics.trackButtonClick('mobile_menu', 'header')
+                }}
                 className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 <Menu className="w-6 h-6" />
               </button>
 
-              <Link to="/" className="flex items-center">
+              <Link
+                to="/"
+                className="flex items-center"
+                onClick={() => analytics.trackNavigation('home', 'header_logo')}
+              >
                 {settings?.site_logo_url ? (
                   <img
                     src={settings.site_logo_url}
@@ -57,6 +66,11 @@ export default function Header() {
               <Link
                 to="/cart"
                 className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                onClick={() => {
+                  const total = items.reduce((sum, item) => sum + (item.sale_price || item.price) * item.quantity, 0)
+                  analytics.trackCartView(cartCount, total)
+                  analytics.trackButtonClick('cart_icon', 'header', { items_count: cartCount })
+                }}
               >
                 <ShoppingCart className="w-6 h-6" />
                 {cartCount > 0 && (

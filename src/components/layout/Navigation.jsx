@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '../../lib/utils'
 import { useCategories } from '../../hooks/useCategories'
+import { useAnalytics } from '../../lib/analytics'
 
 export default function Navigation({ mobile = false, onItemClick }) {
   const location = useLocation()
   const { data: categories } = useCategories()
+  const analytics = useAnalytics()
 
   const linkClasses = (slug) =>
     cn(
@@ -13,6 +15,13 @@ export default function Navigation({ mobile = false, onItemClick }) {
         ? 'bg-black text-white dark:bg-white dark:text-black'
         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
     )
+
+  const handleCategoryClick = (categoryName, categorySlug) => {
+    analytics.trackMenuClick(categoryName)
+    analytics.trackCategoryView(categoryName)
+    analytics.trackNavigation(`/category/${categorySlug}`, mobile ? 'mobile_menu' : 'desktop_nav')
+    if (onItemClick) onItemClick()
+  }
 
   // Special menu items
   const specialItems = [
@@ -28,7 +37,7 @@ export default function Navigation({ mobile = false, onItemClick }) {
           key={item.slug}
           to={`/category/${item.slug}`}
           className={linkClasses(item.slug)}
-          onClick={onItemClick}
+          onClick={() => handleCategoryClick(item.name, item.slug)}
         >
           {item.name}
         </Link>
@@ -40,7 +49,7 @@ export default function Navigation({ mobile = false, onItemClick }) {
           key={category.slug}
           to={`/category/${category.slug}`}
           className={linkClasses(category.slug)}
-          onClick={onItemClick}
+          onClick={() => handleCategoryClick(category.name, category.slug)}
         >
           {category.name}
         </Link>

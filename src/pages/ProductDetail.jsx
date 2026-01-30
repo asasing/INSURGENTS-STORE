@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ShoppingCart, Ruler } from 'lucide-react'
+import { ShoppingCart, Ruler, Zap } from 'lucide-react'
 import { getProductById } from '../services/products'
 import { useCartStore } from '../store/cartStore'
 import Button from '../components/common/Button'
@@ -9,20 +9,31 @@ import Card from '../components/common/Card'
 import Spinner from '../components/common/Spinner'
 import { formatPrice } from '../lib/utils'
 import toast from 'react-hot-toast'
+import { useAnalytics } from '../lib/analytics'
+import {
+  SHOE_SIZES_EU,
+  SHOE_SIZES_US_MEN,
+  SHOE_SIZES_US_WOMEN,
+  SHOE_SIZES_KIDS,
+  APPAREL_SIZES,
+  isSizeAvailable as checkSizeAvailability,
+  convertToEU,
+  formatSizeDisplay
+} from '../lib/sizeConversion'
 
-// Size charts
+// Size charts for display
 const SHOE_SIZES = {
-  EU: [35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48],
-  US_MEN: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
-  US_WOMEN: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+  EU: SHOE_SIZES_EU.filter(s => s >= 35), // Adult sizes only in main display
+  US_MEN: SHOE_SIZES_US_MEN,
+  US_WOMEN: SHOE_SIZES_US_WOMEN,
+  KIDS: SHOE_SIZES_KIDS
 }
-
-const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Free Size']
 
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const addItem = useCartStore((state) => state.addItem)
+  const analytics = useAnalytics()
 
   const [selectedImage, setSelectedImage] = useState(0)
   const [selectedSize, setSelectedSize] = useState('')
@@ -30,12 +41,46 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1)
   const [showSizeChart, setShowSizeChart] = useState(false)
 
-  const isApparel = product?.category?.slug === 'apparels'
-
   const { data: product, isLoading, error } = useQuery({
     queryKey: ['product', id],
     queryFn: () => getProductById(id)
   })
+
+  const isApparel = product?.category?.slug === 'apparels'
+
+  // Check if a size is available (with conversion support for shoes)
+  const isSizeAvailableForDisplay = (size) => {
+    if (!product) return false
+
+    // If product is out of stock, no sizes are available
+    if (product.stock_quantity === 0) return false
+
+    // For apparel, check directly
+    if (isApparel) {
+      if (product.sizes && Array.isArray(product.sizes)) {
+        return product.sizes.some(s => {
+          if (typeof s === 'string') return s === size
+          if (typeof s === 'object') {
+            const match = s.size === size || s.value === size || s.name === size
+            if ('stock' in s) return match && s.stock > 0
+            return match
+          }
+          return false
+        })
+      }
+      return product.stock_quantity > 0
+    }
+
+    // For shoes, use conversion logic
+    return checkSizeAvailability(product.sizes, size, sizeType)
+  }
+
+  // Track product view when product loads
+  useEffect(() => {
+    if (product) {
+      analytics.trackProductView(product)
+    }
+  }, [product])
 
   if (isLoading) {
     return (
@@ -64,19 +109,42 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (!selectedSize) {
       toast.error('Please select a size')
+      analytics.trackButtonClick('add_to_cart_no_size', 'product_detail', { product_id: product.id })
       return
     }
 
-    const sizeLabel = isApparel ? selectedSize : `${getSizeLabel(selectedSize, sizeType)}`
-    addItem(product, quantity, selectedSize)
+    // Convert to EU size for storage if it's a shoe
+    const sizeToStore = isApparel ? selectedSize : (convertToEU(selectedSize, sizeType) || selectedSize).toString()
+    const sizeLabel = isApparel ? selectedSize : formatSizeDisplay(selectedSize, sizeType)
+
+    addItem(product, quantity, sizeToStore)
+    analytics.trackAddToCart(product, quantity, sizeToStore)
+    analytics.trackButtonClick('add_to_cart', 'product_detail', {
+      product_id: product.id,
+      size: sizeToStore,
+      quantity
+    })
     toast.success(`${product.name} (${sizeLabel}) added to cart`)
   }
 
-  const getSizeLabel = (size, type) => {
-    if (type === 'EU') return `EU ${size}`
-    if (type === 'US_MEN') return `US ${size} (Men)`
-    if (type === 'US_WOMEN') return `US ${size} (Women)`
-    return size
+  const handleBuyNow = () => {
+    if (!selectedSize) {
+      toast.error('Please select a size')
+      analytics.trackButtonClick('buy_now_no_size', 'product_detail', { product_id: product.id })
+      return
+    }
+
+    // Convert to EU size for storage if it's a shoe
+    const sizeToStore = isApparel ? selectedSize : (convertToEU(selectedSize, sizeType) || selectedSize).toString()
+
+    addItem(product, quantity, sizeToStore)
+    analytics.trackBuyNow(product, sizeToStore)
+    analytics.trackButtonClick('buy_now', 'product_detail', {
+      product_id: product.id,
+      size: sizeToStore,
+      quantity
+    })
+    navigate('/checkout')
   }
 
   return (
@@ -178,7 +246,7 @@ export default function ProductDetail() {
             <Card className="mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Select Size {selectedSize && (isApparel ? `- ${selectedSize}` : `- ${getSizeLabel(selectedSize, sizeType)}`)}
+                  Select Size {selectedSize && (isApparel ? `- ${selectedSize}` : `- ${formatSizeDisplay(selectedSize, sizeType)}`)}
                 </h2>
                 {!isApparel && (
                   <button
@@ -194,26 +262,32 @@ export default function ProductDetail() {
               {isApparel ? (
                 /* Apparel Size Selection */
                 <div className="grid grid-cols-4 gap-2">
-                  {APPAREL_SIZES.map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`py-3 rounded-lg font-medium transition-colors ${
-                        selectedSize === size
-                          ? 'bg-black text-white dark:bg-white dark:text-black'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {APPAREL_SIZES.map((size) => {
+                    const available = isSizeAvailableForDisplay(size)
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => available && setSelectedSize(size)}
+                        disabled={!available}
+                        className={`py-3 rounded-lg font-medium transition-colors ${
+                          selectedSize === size
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : available
+                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    )
+                  })}
                 </div>
               ) : (
                 /* Shoe Size Selection */
                 <div>
 
                 {/* Size Type Selector */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex flex-wrap gap-2 mb-4">
                   <button
                     onClick={() => { setSizeType('EU'); setSelectedSize('') }}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -244,23 +318,39 @@ export default function ProductDetail() {
                   >
                     US Women
                   </button>
+                  <button
+                    onClick={() => { setSizeType('KIDS'); setSelectedSize('') }}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      sizeType === 'KIDS'
+                        ? 'bg-black text-white dark:bg-white dark:text-black'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Kids
+                  </button>
                 </div>
 
                 {/* Size Selection */}
                 <div className="grid grid-cols-5 gap-2">
-                  {SHOE_SIZES[sizeType].map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size.toString())}
-                      className={`py-2 rounded-lg font-medium transition-colors ${
-                        selectedSize === size.toString()
-                          ? 'bg-black text-white dark:bg-white dark:text-black'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {SHOE_SIZES[sizeType].map((size) => {
+                    const available = isSizeAvailableForDisplay(size.toString())
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => available && setSelectedSize(size.toString())}
+                        disabled={!available}
+                        className={`py-2 rounded-lg font-medium text-sm transition-colors ${
+                          selectedSize === size.toString()
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : available
+                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    )
+                  })}
                 </div>
 
                 {/* Size Chart */}
@@ -270,24 +360,52 @@ export default function ProductDetail() {
                       Size Conversion Chart
                     </h3>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-300 dark:border-gray-600">
-                            <th className="text-left py-2 text-gray-900 dark:text-white">EU</th>
-                            <th className="text-left py-2 text-gray-900 dark:text-white">US Men</th>
-                            <th className="text-left py-2 text-gray-900 dark:text-white">US Women</th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-gray-700 dark:text-gray-300">
-                          {SHOE_SIZES.EU.map((euSize, index) => (
-                            <tr key={euSize} className="border-b border-gray-200 dark:border-gray-700">
-                              <td className="py-2">{euSize}</td>
-                              <td className="py-2">{SHOE_SIZES.US_MEN[index]}</td>
-                              <td className="py-2">{SHOE_SIZES.US_WOMEN[index]}</td>
+                      <div className="mb-4">
+                        <h4 className="text-sm font-semibold mb-2 text-gray-900 dark:text-white">Adult Sizes</h4>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-300 dark:border-gray-600">
+                              <th className="text-left py-2 text-gray-900 dark:text-white">EU</th>
+                              <th className="text-left py-2 text-gray-900 dark:text-white">US Men</th>
+                              <th className="text-left py-2 text-gray-900 dark:text-white">US Women</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="text-gray-700 dark:text-gray-300">
+                            {SHOE_SIZES.EU.map((euSize, index) => (
+                              <tr key={euSize} className="border-b border-gray-200 dark:border-gray-700">
+                                <td className="py-2">{euSize}</td>
+                                <td className="py-2">{SHOE_SIZES.US_MEN[index]}</td>
+                                <td className="py-2">{SHOE_SIZES.US_WOMEN[index]}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold mb-2 text-gray-900 dark:text-white">Kids Sizes</h4>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-gray-300 dark:border-gray-600">
+                              <th className="text-left py-2 text-gray-900 dark:text-white">EU</th>
+                              <th className="text-left py-2 text-gray-900 dark:text-white">US Kids</th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-gray-700 dark:text-gray-300">
+                            <tr className="border-b border-gray-200 dark:border-gray-700">
+                              <td className="py-2">24-27</td>
+                              <td className="py-2">7.5-10</td>
+                            </tr>
+                            <tr className="border-b border-gray-200 dark:border-gray-700">
+                              <td className="py-2">28-31</td>
+                              <td className="py-2">11-13</td>
+                            </tr>
+                            <tr className="border-b border-gray-200 dark:border-gray-700">
+                              <td className="py-2">32-34</td>
+                              <td className="py-2">1-3</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -319,15 +437,27 @@ export default function ProductDetail() {
               </div>
             </Card>
 
-            {/* Add to Cart */}
-            <Button
-              onClick={handleAddToCart}
-              className="w-full flex items-center justify-center gap-2"
-              size="lg"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              Add to Cart
-            </Button>
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <Button
+                onClick={handleAddToCart}
+                variant="secondary"
+                className="flex-1 flex items-center justify-center gap-2"
+                size="lg"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                Add to Cart
+              </Button>
+
+              <Button
+                onClick={handleBuyNow}
+                className="flex-1 flex items-center justify-center gap-2"
+                size="lg"
+              >
+                <Zap className="w-5 h-5" />
+                Buy Now
+              </Button>
+            </div>
 
             {/* Stock Info */}
             {product.stock !== undefined && (

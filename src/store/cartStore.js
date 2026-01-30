@@ -49,6 +49,15 @@ export const useCartStore = create(
           )
         })),
 
+      updateSize: (cartItemId, newSize) =>
+        set((state) => ({
+          items: state.items.map((item) =>
+            item.cartItemId === cartItemId
+              ? { ...item, selectedSize: newSize }
+              : item
+          )
+        })),
+
       clearCart: () => set({ items: [] }),
 
       getTotal: () => {
