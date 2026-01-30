@@ -74,19 +74,51 @@ export async function updateOrderStatus(id, status) {
 
 export async function createMayaCheckoutSession(order) {
   try {
-    // Use Payment Link approach (simpler, no API calls needed)
-    const paymentLink = generateMayaPaymentLink(order)
+    // Dynamically import to avoid circular dependencies
+    const { createMayaCheckout } = await import('./maya')
 
-    if (!paymentLink) {
-      throw new Error('Maya Payment Link not configured. Please add VITE_MAYA_PAYMENT_LINK to your .env file')
+    const appUrl = window.location.origin
+
+    // Parse customer name into first and last name
+    const nameParts = order.customer_name.split(' ')
+    const firstName = nameParts[0] || ''
+    const lastName = nameParts.slice(1).join(' ') || ''
+
+    // Prepare checkout data
+    const checkoutData = {
+      totalAmount: order.total,
+      requestReferenceNumber: order.id,
+      buyer: {
+        firstName,
+        lastName,
+        phone: order.customer_phone,
+        email: order.customer_email,
+        shippingAddress: order.shipping_address ? {
+          line1: order.shipping_address.address,
+          city: order.shipping_address.city,
+          zipCode: order.shipping_address.postalCode
+        } : undefined
+      },
+      items: order.items.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        code: item.id,
+        description: item.name,
+        amount: item.price
+      })),
+      redirectUrl: {
+        success: `${appUrl}/order-confirmation/${order.id}?status=success`,
+        failure: `${appUrl}/order-confirmation/${order.id}?status=failed`,
+        cancel: `${appUrl}/checkout?status=cancelled`
+      },
+      metadata: {
+        orderId: order.id,
+        customerEmail: order.customer_email
+      }
     }
 
-    console.log('🔗 Generated Maya Payment Link:', paymentLink)
-
-    return {
-      redirectUrl: paymentLink,
-      paymentMethod: 'maya-payment-link'
-    }
+    const checkout = await createMayaCheckout(checkoutData)
+    return checkout
   } catch (error) {
     console.error('Error creating Maya checkout session:', error)
     throw error

@@ -1,32 +1,35 @@
 -- Fix RLS policy for online_orders table
--- This allows public (unauthenticated) users to create orders
+-- This allows unauthenticated users to create orders
 
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Allow public order creation" ON online_orders;
-DROP POLICY IF EXISTS "Allow public to insert orders" ON online_orders;
+-- Drop ALL existing policies first
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT policyname FROM pg_policies WHERE tablename = 'online_orders') LOOP
+        EXECUTE 'DROP POLICY IF EXISTS "' || r.policyname || '" ON online_orders';
+    END LOOP;
+END $$;
 
 -- Enable RLS on online_orders table
 ALTER TABLE online_orders ENABLE ROW LEVEL SECURITY;
 
--- Allow anyone to insert orders (for checkout)
-CREATE POLICY "Allow public to insert orders"
+-- Allow ANYONE (including anonymous users) to insert orders
+CREATE POLICY "allow_insert_orders"
 ON online_orders
 FOR INSERT
-TO public
 WITH CHECK (true);
 
--- Allow users to read their own orders by email (optional, for order tracking)
-CREATE POLICY "Allow users to read own orders"
+-- Allow ANYONE to read all orders (you can restrict this later)
+CREATE POLICY "allow_read_orders"
 ON online_orders
 FOR SELECT
-TO public
-USING (customer_email = current_setting('request.jwt.claims', true)::json->>'email');
+USING (true);
 
--- For admin users to read all orders (if you have admin authentication)
--- Uncomment this if you want admins to see all orders
--- CREATE POLICY "Admins can read all orders"
+-- Optional: Allow authenticated admins to update orders
+-- CREATE POLICY "allow_admin_update_orders"
 -- ON online_orders
--- FOR SELECT
+-- FOR UPDATE
 -- TO authenticated
 -- USING (
 --   EXISTS (
