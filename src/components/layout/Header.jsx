@@ -1,0 +1,59 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Menu, ShoppingCart } from 'lucide-react'
+import ThemeToggle from './ThemeToggle'
+import Navigation from './Navigation'
+import MobileMenu from './MobileMenu'
+import { useCartStore } from '../../store/cartStore'
+
+export default function Header() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const items = useCartStore((state) => state.items)
+  const cartCount = items.reduce((total, item) => total + item.quantity, 0)
+
+  return (
+    <>
+      <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            {/* Logo & Mobile Menu Toggle */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+
+              <Link to="/" className="text-2xl font-bold text-gray-900 dark:text-white">
+                Insurgents
+              </Link>
+            </div>
+
+            {/* Desktop Navigation */}
+            <Navigation />
+
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+
+              <Link
+                to="/cart"
+                className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <ShoppingCart className="w-6 h-6" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <MobileMenu isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+    </>
+  )
+}
