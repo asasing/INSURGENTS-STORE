@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Home from './pages/Home'
 import Category from './pages/Category'
+import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import OrderConfirmation from './pages/OrderConfirmation'
@@ -44,6 +45,20 @@ function App() {
               <SaleTimer />
               <main className="flex-1">
                 <Category />
+              </main>
+              <Footer />
+            </div>
+          }
+        />
+
+        {/* Product Detail Route */}
+        <Route
+          path="/product/:id"
+          element={
+            <div className="flex flex-col min-h-screen">
+              <Header />
+              <main className="flex-1">
+                <ProductDetail />
               </main>
               <Footer />
             </div>

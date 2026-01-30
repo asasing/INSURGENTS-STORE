@@ -5,10 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Package, CreditCard } from 'lucide-react'
 import { useCartStore } from '../store/cartStore'
-import { createOrder, generateMayaPaymentLink } from '../services/orders'
+import { createOrder, createMayaCheckoutSession } from '../services/orders'
 import Button from '../components/common/Button'
 import Input from '../components/common/Input'
 import Card from '../components/common/Card'
+import LoadingModal from '../components/common/LoadingModal'
 import { formatPrice } from '../lib/utils'
 import toast from 'react-hot-toast'
 
@@ -68,39 +69,45 @@ export default function Checkout() {
         }
       })
 
-      // Generate Maya payment link
-      const paymentLink = generateMayaPaymentLink(order)
+      // Create Maya checkout session
+      try {
+        const checkout = await createMayaCheckoutSession(order)
 
-      if (paymentLink) {
         // Clear cart
         clearCart()
 
         // Show success message
         toast.success('Order created! Redirecting to payment...')
 
-        // Redirect to Maya payment
+        // Redirect to Maya checkout
         setTimeout(() => {
-          window.location.href = paymentLink
-        }, 1500)
-      } else {
-        // No Maya link configured - just show confirmation
+          window.location.href = checkout.redirectUrl
+        }, 1000)
+      } catch (mayaError) {
+        // If Maya checkout fails, still show order confirmation
+        console.error('Maya checkout error:', mayaError)
         clearCart()
-        toast.success('Order placed successfully!')
+        toast.error('Payment gateway error. Please contact support with your order ID.')
         navigate(`/order-confirmation/${order.id}`)
       }
     } catch (error) {
       console.error('Checkout error:', error)
       toast.error('Failed to process order. Please try again.')
-    } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
-        Checkout
-      </h1>
+    <>
+      <LoadingModal
+        isOpen={loading}
+        message="Processing your order..."
+      />
+
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
+          Checkout
+        </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Checkout Form */}
@@ -275,6 +282,7 @@ export default function Checkout() {
           </Card>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

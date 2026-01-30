@@ -100,12 +100,16 @@ src/
 
 2. **Configure environment variables**
 
-   Update `.env` with your Supabase credentials:
+   Create a `.env` file with your credentials (see `.env.example`):
    ```env
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   VITE_MAYA_PAYMENT_LINK=your_maya_payment_link
+   VITE_MAYA_PUBLIC_KEY=your_maya_public_key
+   VITE_MAYA_SECRET_KEY=your_maya_secret_key
+   VITE_MAYA_API_BASE=https://pg-sandbox.paymaya.com
    ```
+
+   **Note:** Use sandbox URL for development. For production deployment, set `VITE_MAYA_API_BASE=https://pg.paymaya.com` in Vercel environment variables.
 
 3. **Set up Supabase database**
 

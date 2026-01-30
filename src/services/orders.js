@@ -72,6 +72,28 @@ export async function updateOrderStatus(id, status) {
   }
 }
 
+export async function createMayaCheckoutSession(order) {
+  try {
+    // Use Payment Link approach (simpler, no API calls needed)
+    const paymentLink = generateMayaPaymentLink(order)
+
+    if (!paymentLink) {
+      throw new Error('Maya Payment Link not configured. Please add VITE_MAYA_PAYMENT_LINK to your .env file')
+    }
+
+    console.log('🔗 Generated Maya Payment Link:', paymentLink)
+
+    return {
+      redirectUrl: paymentLink,
+      paymentMethod: 'maya-payment-link'
+    }
+  } catch (error) {
+    console.error('Error creating Maya checkout session:', error)
+    throw error
+  }
+}
+
+// Keep the old function for backward compatibility
 export function generateMayaPaymentLink(order) {
   const mayaBaseLink = import.meta.env.VITE_MAYA_PAYMENT_LINK
 
