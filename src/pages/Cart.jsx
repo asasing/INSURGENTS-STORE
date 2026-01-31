@@ -5,11 +5,32 @@ import { useCartStore } from '../store/cartStore'
 import Button from '../components/common/Button'
 import { formatPrice } from '../lib/utils'
 import { checkProductAvailability } from '../services/products'
+import { APPAREL_SIZES, SHOE_SIZES_EU, convertFromEU } from '../lib/sizeConversion'
 import toast from 'react-hot-toast'
 
-// Size options
-const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Free Size']
-const SHOE_SIZES_EU = [35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]
+const formatShoeSizeLabel = (euSize) => {
+  const usMen = convertFromEU(euSize, 'US_MEN')
+  const usKids = convertFromEU(euSize, 'KIDS')
+  const usLabel = usMen ? `US ${usMen}` : usKids ? `US ${usKids} (Kids)` : null
+  return usLabel ? `EU ${euSize} / ${usLabel}` : `EU ${euSize}`
+}
+
+const isSizeAvailable = (item, size) => {
+  if (item.stock_quantity === 0) return false
+  if (item.sizes && Array.isArray(item.sizes)) {
+    const sizeData = item.sizes.find((s) => {
+      if (typeof s === 'object') {
+        return s.size === size || s.value === size || s.name === size
+      }
+      return s === size
+    })
+    if (sizeData && typeof sizeData === 'object' && 'stock' in sizeData) {
+      return sizeData.stock > 0
+    }
+    return !!sizeData
+  }
+  return item.stock_quantity > 0
+}
 
 export default function Cart() {
   const { items, updateQuantity, updateSize, removeItem, getTotal } = useCartStore()
@@ -111,6 +132,7 @@ export default function Cart() {
           {items.map((item) => {
             const isApparel = item.category?.slug === 'apparels'
             const sizeOptions = isApparel ? APPAREL_SIZES : SHOE_SIZES_EU
+            const availableSizes = sizeOptions.filter((size) => isSizeAvailable(item, size))
 
             return (
               <div
@@ -150,9 +172,9 @@ export default function Cart() {
                         disabled={updatingSize[item.cartItemId]}
                         className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                       >
-                        {sizeOptions.map((size) => (
+                        {availableSizes.map((size) => (
                           <option key={size} value={size}>
-                            {isApparel ? size : `EU ${size}`}
+                            {isApparel ? size : formatShoeSizeLabel(size)}
                           </option>
                         ))}
                       </select>

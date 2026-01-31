@@ -17,6 +17,7 @@ import {
   SHOE_SIZES_KIDS,
   APPAREL_SIZES,
   isSizeAvailable as checkSizeAvailability,
+  convertFromEU,
   convertToEU,
   formatSizeDisplay
 } from '../lib/sizeConversion'
@@ -47,6 +48,16 @@ export default function ProductDetail() {
   })
 
   const isApparel = product?.category?.slug === 'apparels'
+  const formatDualShoeLabel = (size) => {
+    if (sizeType === 'EU') {
+      const usMen = convertFromEU(Number(size), 'US_MEN')
+      const usKids = convertFromEU(Number(size), 'KIDS')
+      const usLabel = usMen ? `US ${usMen}` : usKids ? `US ${usKids} (Kids)` : null
+      return usLabel ? `EU ${size} / ${usLabel}` : `EU ${size}`
+    }
+    const euSize = convertToEU(size, sizeType)
+    return euSize ? `${formatSizeDisplay(size, sizeType)} / EU ${euSize}` : formatSizeDisplay(size, sizeType)
+  }
 
   // Check if a size is available (with conversion support for shoes)
   const isSizeAvailableForDisplay = (size) => {
@@ -262,25 +273,19 @@ export default function ProductDetail() {
               {isApparel ? (
                 /* Apparel Size Selection */
                 <div className="grid grid-cols-4 gap-2">
-                  {APPAREL_SIZES.map((size) => {
-                    const available = isSizeAvailableForDisplay(size)
-                    return (
-                      <button
-                        key={size}
-                        onClick={() => available && setSelectedSize(size)}
-                        disabled={!available}
-                        className={`py-3 rounded-lg font-medium transition-colors ${
-                          selectedSize === size
-                            ? 'bg-black text-white dark:bg-white dark:text-black'
-                            : available
-                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
-                        }`}
-                      >
-                        {size}
-                      </button>
-                    )
-                  })}
+                  {APPAREL_SIZES.filter((size) => isSizeAvailableForDisplay(size)).map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`py-3 rounded-lg font-medium transition-colors ${
+                        selectedSize === size
+                          ? 'bg-black text-white dark:bg-white dark:text-black'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
                 </div>
               ) : (
                 /* Shoe Size Selection */
@@ -332,25 +337,21 @@ export default function ProductDetail() {
 
                 {/* Size Selection */}
                 <div className="grid grid-cols-5 gap-2">
-                  {SHOE_SIZES[sizeType].map((size) => {
-                    const available = isSizeAvailableForDisplay(size.toString())
-                    return (
+                  {SHOE_SIZES[sizeType]
+                    .filter((size) => isSizeAvailableForDisplay(size.toString()))
+                    .map((size) => (
                       <button
                         key={size}
-                        onClick={() => available && setSelectedSize(size.toString())}
-                        disabled={!available}
+                        onClick={() => setSelectedSize(size.toString())}
                         className={`py-2 rounded-lg font-medium text-sm transition-colors ${
                           selectedSize === size.toString()
                             ? 'bg-black text-white dark:bg-white dark:text-black'
-                            : available
-                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
                       >
-                        {size}
+                        {formatDualShoeLabel(size)}
                       </button>
-                    )
-                  })}
+                    ))}
                 </div>
 
                 {/* Size Chart */}

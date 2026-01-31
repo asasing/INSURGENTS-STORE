@@ -71,6 +71,17 @@ export default function Dashboard() {
         </h2>
         <div className="space-y-2">
           <Link
+            to="/admin/orders"
+            className="block p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <span className="font-medium text-gray-900 dark:text-white">
+              Manage Orders
+            </span>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Track payments and fulfillment status
+            </p>
+          </Link>
+          <Link
             to="/admin/inventory"
             className="block p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >

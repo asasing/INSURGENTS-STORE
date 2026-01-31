@@ -62,6 +62,8 @@ CREATE TABLE IF NOT EXISTS online_orders (
   items jsonb NOT NULL,
   total numeric(10,2) NOT NULL,
   status text DEFAULT 'pending',
+  payment_method text DEFAULT 'maya',
+  payment_status text DEFAULT 'pending',
   payment_reference text,
   shipping_address jsonb,
   created_at timestamptz DEFAULT now()

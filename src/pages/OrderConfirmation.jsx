@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { CheckCircle, Package } from 'lucide-react'
-import { getOrderById } from '../services/orders'
+import { getOrderById, updateOrder } from '../services/orders'
 import Button from '../components/common/Button'
 import Card from '../components/common/Card'
 import Spinner from '../components/common/Spinner'
@@ -9,8 +9,10 @@ import { formatPrice } from '../lib/utils'
 
 export default function OrderConfirmation() {
   const { orderId } = useParams()
+  const [searchParams] = useSearchParams()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [statusSynced, setStatusSynced] = useState(false)
 
   useEffect(() => {
     if (orderId) {
@@ -28,6 +30,33 @@ export default function OrderConfirmation() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!order || statusSynced) return
+    const status = searchParams.get('status')
+    if (!status) return
+
+    const updates = {}
+    if (status === 'success') {
+      if (order.payment_status !== 'paid') updates.payment_status = 'paid'
+      if (order.status === 'pending') updates.status = 'processing'
+    } else if (status === 'failed') {
+      if (order.payment_status !== 'failed') updates.payment_status = 'failed'
+    } else if (status === 'cancelled') {
+      updates.status = 'cancelled'
+      updates.payment_status = 'failed'
+    }
+
+    if (!Object.keys(updates).length) {
+      setStatusSynced(true)
+      return
+    }
+
+    updateOrder(order.id, updates)
+      .then((next) => setOrder(next))
+      .catch((error) => console.error('Failed to sync order status:', error))
+      .finally(() => setStatusSynced(true))
+  }, [order, searchParams, statusSynced])
 
   if (loading) {
     return (
@@ -134,13 +163,19 @@ export default function OrderConfirmation() {
           </div>
         </Card>
 
-        {/* Payment Status */}
+        {/* Payment & Fulfillment Status */}
         <Card className="mb-6">
           <div className="flex items-center gap-3">
             <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             <div>
               <div className="font-semibold text-gray-900 dark:text-white">
-                Payment Status: <span className="text-orange-600">{order.status}</span>
+                Payment Method: <span className="text-orange-600">{(order.payment_method || 'maya').toUpperCase()}</span>
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Payment Status: <span className="text-orange-600">{order.payment_status || 'pending'}</span>
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Order Status: <span className="text-orange-600">{order.status || 'pending'}</span>
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 We'll send you updates about your order via email

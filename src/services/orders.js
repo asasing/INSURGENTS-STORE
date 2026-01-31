@@ -2,6 +2,8 @@ import { supabase } from '../lib/supabase'
 
 export async function createOrder(orderData) {
   try {
+    const paymentMethod = orderData.paymentMethod || 'maya'
+    const paymentStatus = orderData.paymentStatus || (paymentMethod === 'cod' ? 'pending' : 'pending')
     const { data, error } = await supabase
       .from('online_orders')
       .insert({
@@ -11,7 +13,9 @@ export async function createOrder(orderData) {
         items: orderData.items,
         total: orderData.total,
         shipping_address: orderData.shippingAddress,
-        status: 'pending'
+        status: orderData.status || 'pending',
+        payment_method: paymentMethod,
+        payment_status: paymentStatus
       })
       .select()
       .single()
@@ -68,6 +72,40 @@ export async function updateOrderStatus(id, status) {
     return data
   } catch (error) {
     console.error('Error updating order status:', error)
+    throw error
+  }
+}
+
+export async function updateOrderPaymentStatus(id, payment_status) {
+  try {
+    const { data, error } = await supabase
+      .from('online_orders')
+      .update({ payment_status })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  } catch (error) {
+    console.error('Error updating order payment status:', error)
+    throw error
+  }
+}
+
+export async function updateOrder(id, updates) {
+  try {
+    const { data, error } = await supabase
+      .from('online_orders')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  } catch (error) {
+    console.error('Error updating order:', error)
     throw error
   }
 }

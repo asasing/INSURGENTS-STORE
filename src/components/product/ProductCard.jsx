@@ -8,7 +8,7 @@ import { useCartStore } from '../../store/cartStore'
 import toast from 'react-hot-toast'
 import { calculateSalePercentage } from '../../lib/utils'
 import { useAnalytics } from '../../lib/analytics'
-import { APPAREL_SIZES, SHOE_SIZES_EU } from '../../lib/sizeConversion'
+import { APPAREL_SIZES, SHOE_SIZES_EU, convertFromEU } from '../../lib/sizeConversion'
 
 export default function ProductCard({ product }) {
   const addItem = useCartStore((state) => state.addItem)
@@ -20,6 +20,12 @@ export default function ProductCard({ product }) {
   const discount = isOnSale ? calculateSalePercentage(product.price, product.sale_price) : 0
   const isApparel = product.category?.slug === 'apparels'
   const sizeOptions = isApparel ? APPAREL_SIZES : SHOE_SIZES_EU
+  const formatShoeSizeLabel = (euSize) => {
+    const usMen = convertFromEU(euSize, 'US_MEN')
+    const usKids = convertFromEU(euSize, 'KIDS')
+    const usLabel = usMen ? `US ${usMen}` : usKids ? `US ${usKids} (Kids)` : null
+    return usLabel ? `EU ${euSize} / ${usLabel}` : `EU ${euSize}`
+  }
 
   // Check if a size is available
   const isSizeAvailable = (size) => {
@@ -152,21 +158,15 @@ export default function ProductCard({ product }) {
               className="w-full mt-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-600"
             >
               <option value="">
-                {isApparel ? 'Select Size' : 'Select Size (EU)'}
+                {isApparel ? 'Select Size' : 'Select Size (EU / US)'}
               </option>
-              {sizeOptions.map((size) => {
-                const available = isSizeAvailable(size)
-                return (
-                  <option
-                    key={size}
-                    value={size}
-                    disabled={!available}
-                    className={!available ? 'text-gray-400 dark:text-gray-500' : ''}
-                  >
-                    {isApparel ? size : `EU ${size}`}{!available ? ' (Out of Stock)' : ''}
+              {sizeOptions
+                .filter((size) => isSizeAvailable(size))
+                .map((size) => (
+                  <option key={size} value={size}>
+                    {isApparel ? size : formatShoeSizeLabel(size)}
                   </option>
-                )
-              })}
+                ))}
             </select>
 
             {/* Action Buttons */}

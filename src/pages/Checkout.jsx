@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -26,8 +26,10 @@ const checkoutSchema = z.object({
 
 export default function Checkout() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { items, getTotal, clearCart } = useCartStore()
   const [loading, setLoading] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState('maya')
   const analytics = useAnalytics()
 
   const {
@@ -48,6 +50,23 @@ export default function Checkout() {
       total
     })
   }, [])
+
+  useEffect(() => {
+    const status = searchParams.get('status')
+    if (status !== 'cancelled') return
+    const lastOrderId = localStorage.getItem('last_order_id')
+    if (!lastOrderId) return
+    import('../services/orders').then(({ updateOrder }) => {
+      return updateOrder(lastOrderId, {
+        status: 'cancelled',
+        payment_status: 'failed'
+      })
+    }).catch((error) => {
+      console.error('Failed to update cancelled order:', error)
+    }).finally(() => {
+      localStorage.removeItem('last_order_id')
+    })
+  }, [searchParams])
 
   if (items.length === 0) {
     navigate('/cart')
@@ -77,12 +96,30 @@ export default function Checkout() {
           city: data.city,
           postalCode: data.postalCode,
           notes: data.notes
-        }
+        },
+        paymentMethod,
+        status: 'pending',
+        paymentStatus: paymentMethod === 'cod' ? 'pending' : 'pending'
       })
+
+      if (paymentMethod === 'cod') {
+        localStorage.removeItem('last_order_id')
+        analytics.trackPurchase(order)
+        analytics.trackButtonClick('place_order_cod', 'checkout', {
+          order_id: order.id,
+          total: order.total
+        })
+        clearCart()
+        toast.success('Order placed! Pay on delivery.')
+        setLoading(false)
+        navigate(`/order-confirmation/${order.id}`)
+        return
+      }
 
       // Create Maya checkout session
       try {
         const checkout = await createMayaCheckoutSession(order)
+        localStorage.setItem('last_order_id', order.id)
 
         // Track purchase
         analytics.trackPurchase(order)
@@ -229,10 +266,39 @@ export default function Checkout() {
                 </h2>
               </div>
 
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <p className="text-sm text-blue-900 dark:text-blue-100">
-                  You will be redirected to Maya payment gateway to complete your purchase securely.
-                </p>
+              <div className="space-y-3">
+                <label className="flex items-start gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="maya"
+                    checked={paymentMethod === 'maya'}
+                    onChange={() => setPaymentMethod('maya')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">Maya (Card/Wallet)</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      You will be redirected to Maya to complete payment securely.
+                    </div>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cod"
+                    checked={paymentMethod === 'cod'}
+                    onChange={() => setPaymentMethod('cod')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">Cash on Delivery (COD)</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      Pay the rider when your order arrives.
+                    </div>
+                  </div>
+                </label>
               </div>
             </Card>
 

@@ -63,7 +63,7 @@ export function useAnalytics() {
         total: order.total,
         items_count: order.items?.length,
         customer_email: order.customer_email,
-        payment_method: 'maya'
+        payment_method: order.payment_method || 'maya'
       })
     },
 

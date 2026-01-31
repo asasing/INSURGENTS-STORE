@@ -7,6 +7,7 @@ import Checkout from './pages/Checkout'
 import OrderConfirmation from './pages/OrderConfirmation'
 import Login from './pages/admin/Login'
 import Dashboard from './pages/admin/Dashboard'
+import Orders from './pages/admin/Orders'
 import Inventory from './pages/admin/Inventory'
 import SaleManager from './pages/admin/SaleManager'
 import Testimonials from './pages/admin/Testimonials'
@@ -121,6 +122,16 @@ function App() {
             <ProtectedRoute>
               <AdminLayout>
                 <Inventory />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/orders"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <Orders />
               </AdminLayout>
             </ProtectedRoute>
           }
