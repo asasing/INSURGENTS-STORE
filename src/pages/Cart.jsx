@@ -132,7 +132,6 @@ export default function Cart() {
           {items.map((item) => {
             const isApparel = item.category?.slug === 'apparels'
             const sizeOptions = isApparel ? APPAREL_SIZES : SHOE_SIZES_EU
-            const availableSizes = sizeOptions.filter((size) => isSizeAvailable(item, size))
 
             return (
               <div
@@ -172,11 +171,14 @@ export default function Cart() {
                         disabled={updatingSize[item.cartItemId]}
                         className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                       >
-                        {availableSizes.map((size) => (
-                          <option key={size} value={size}>
-                            {isApparel ? size : formatShoeSizeLabel(size)}
-                          </option>
-                        ))}
+                        {sizeOptions.map((size) => {
+                          const available = isSizeAvailable(item, size)
+                          return (
+                            <option key={size} value={size} disabled={!available}>
+                              {isApparel ? size : formatShoeSizeLabel(size)}{!available ? ' (Out of Stock)' : ''}
+                            </option>
+                          )
+                        })}
                       </select>
                     </div>
 

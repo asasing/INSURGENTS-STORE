@@ -83,6 +83,9 @@ export default function ProductDetail() {
     }
 
     // For shoes, use conversion logic
+    if (!product.sizes || !Array.isArray(product.sizes)) {
+      return product.stock_quantity > 0
+    }
     return checkSizeAvailability(product.sizes, size, sizeType)
   }
 
@@ -273,19 +276,25 @@ export default function ProductDetail() {
               {isApparel ? (
                 /* Apparel Size Selection */
                 <div className="grid grid-cols-4 gap-2">
-                  {APPAREL_SIZES.filter((size) => isSizeAvailableForDisplay(size)).map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`py-3 rounded-lg font-medium transition-colors ${
-                        selectedSize === size
-                          ? 'bg-black text-white dark:bg-white dark:text-black'
-                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {APPAREL_SIZES.map((size) => {
+                    const available = isSizeAvailableForDisplay(size)
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => available && setSelectedSize(size)}
+                        disabled={!available}
+                        className={`py-3 rounded-lg font-medium transition-colors ${
+                          selectedSize === size
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : available
+                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    )
+                  })}
                 </div>
               ) : (
                 /* Shoe Size Selection */
@@ -337,21 +346,25 @@ export default function ProductDetail() {
 
                 {/* Size Selection */}
                 <div className="grid grid-cols-5 gap-2">
-                  {SHOE_SIZES[sizeType]
-                    .filter((size) => isSizeAvailableForDisplay(size.toString()))
-                    .map((size) => (
+                  {SHOE_SIZES[sizeType].map((size) => {
+                    const available = isSizeAvailableForDisplay(size.toString())
+                    return (
                       <button
                         key={size}
-                        onClick={() => setSelectedSize(size.toString())}
+                        onClick={() => available && setSelectedSize(size.toString())}
+                        disabled={!available}
                         className={`py-2 rounded-lg font-medium text-sm transition-colors ${
                           selectedSize === size.toString()
                             ? 'bg-black text-white dark:bg-white dark:text-black'
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                            : available
+                            ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
                         }`}
                       >
                         {formatDualShoeLabel(size)}
                       </button>
-                    ))}
+                    )
+                  })}
                 </div>
 
                 {/* Size Chart */}

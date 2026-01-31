@@ -110,9 +110,10 @@ export default function Checkout() {
           total: order.total
         })
         clearCart()
-        toast.success('Order placed! Pay on delivery.')
-        setLoading(false)
-        navigate(`/order-confirmation/${order.id}`)
+        setLoading(false);
+        navigate('/order-success', {
+          state: { orderId: order.id, paymentMethod: 'Cash on Delivery' },
+        });
         return
       }
 

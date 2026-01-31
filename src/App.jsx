@@ -5,11 +5,13 @@ import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import OrderConfirmation from './pages/OrderConfirmation'
+import Loading from './pages/Loading'
+import OrderSuccess from './pages/OrderSuccess'
 import Login from './pages/admin/Login'
 import Dashboard from './pages/admin/Dashboard'
 import Orders from './pages/admin/Orders'
 import Inventory from './pages/admin/Inventory'
-import SaleManager from './pages/admin/SaleManager'
+import Promotions from './pages/admin/Promotions'
 import Testimonials from './pages/admin/Testimonials'
 import Settings from './pages/admin/Settings'
 import Header from './components/layout/Header'
@@ -104,6 +106,10 @@ function App() {
           }
         />
 
+        {/* Loading and Success Routes */}
+        <Route path="/loading" element={<Loading />} />
+        <Route path="/order-success" element={<OrderSuccess />} />
+
         {/* Admin Routes */}
         <Route path="/admin/login" element={<Login />} />
         <Route
@@ -137,11 +143,11 @@ function App() {
           }
         />
         <Route
-          path="/admin/sales"
+          path="/admin/promotions"
           element={
             <ProtectedRoute>
               <AdminLayout>
-                <SaleManager />
+                <Promotions />
               </AdminLayout>
             </ProtectedRoute>
           }

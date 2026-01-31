@@ -15,6 +15,8 @@ export default function Inventory() {
   const [showModal, setShowModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [sortKey, setSortKey] = useState('name')
+  const [sortDir, setSortDir] = useState('asc')
 
   const queryClient = useQueryClient()
 
@@ -101,6 +103,31 @@ export default function Inventory() {
     product.description?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const sortedProducts = [...(filteredProducts || [])].sort((a, b) => {
+    const dir = sortDir === 'asc' ? 1 : -1
+    if (sortKey === 'price') return dir * (Number(a.price || 0) - Number(b.price || 0))
+    if (sortKey === 'stock_quantity') return dir * (Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0))
+    if (sortKey === 'category') return dir * String(a.category?.name || '').localeCompare(String(b.category?.name || ''))
+    if (sortKey === 'is_active') return dir * (a.is_active === b.is_active ? 0 : a.is_active ? -1 : 1)
+    return dir * String(a[sortKey] || '').localeCompare(String(b[sortKey] || ''))
+  })
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortKey(key)
+    setSortDir('asc')
+  }
+
+  const sortLabel = (key, label) => (
+    <button type="button" onClick={() => toggleSort(key)} className="inline-flex items-center gap-1">
+      <span>{label}</span>
+      {sortKey === key ? <span className="text-xs">{sortDir === 'asc' ? '▲' : '▼'}</span> : null}
+    </button>
+  )
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -171,19 +198,19 @@ export default function Inventory() {
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700">
                 <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">
-                  Product
+                  {sortLabel('name', 'Product')}
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">
-                  Category
+                  {sortLabel('category', 'Category')}
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">
-                  Price
+                  {sortLabel('price', 'Price')}
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">
-                  Stock
+                  {sortLabel('stock_quantity', 'Stock')}
                 </th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">
-                  Status
+                  {sortLabel('is_active', 'Status')}
                 </th>
                 <th className="text-right py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">
                   Actions
@@ -191,7 +218,7 @@ export default function Inventory() {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts?.map((product) => (
+              {sortedProducts.map((product) => (
                 <tr
                   key={product.id}
                   className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"

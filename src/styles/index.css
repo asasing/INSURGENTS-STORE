@@ -6,4 +6,29 @@
   body {
     @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors;
   }
+
+  /* Style for disabled select options */
+  select option:disabled {
+    color: #9ca3af !important;
+    background-color: #f3f4f6 !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  /* Dark mode disabled options */
+  .dark select option:disabled {
+    color: #6b7280 !important;
+    background-color: #1f2937 !important;
+  }
+
+  /* Additional styling for better visibility */
+  select option:enabled {
+    color: #111827;
+    background-color: #ffffff;
+  }
+
+  .dark select option:enabled {
+    color: #f9fafb;
+    background-color: #1f2937;
+  }
 }

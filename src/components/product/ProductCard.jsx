@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ShoppingCart, Zap } from 'lucide-react'
 import Card from '../common/Card'
@@ -8,96 +8,151 @@ import { useCartStore } from '../../store/cartStore'
 import toast from 'react-hot-toast'
 import { calculateSalePercentage } from '../../lib/utils'
 import { useAnalytics } from '../../lib/analytics'
-import { APPAREL_SIZES, SHOE_SIZES_EU, convertFromEU } from '../../lib/sizeConversion'
+import {
+  APPAREL_SIZES,
+  SHOE_SIZES_EU,
+  SHOE_SIZES_US_MEN,
+  SHOE_SIZES_US_WOMEN,
+  SHOE_SIZES_KIDS,
+  convertFromEU,
+  convertToEU,
+} from '../../lib/sizeConversion'
+
+const ALL_US_SIZES = [
+  ...SHOE_SIZES_US_MEN.map((s) => ({ size: s, type: 'US_MEN' })),
+  ...SHOE_SIZES_US_WOMEN.map((s) => ({ size: s, type: 'US_WOMEN' })),
+  ...SHOE_SIZES_KIDS.map((s) => ({ size: s, type: 'KIDS' })),
+].sort((a, b) => a.size - b.size)
 
 export default function ProductCard({ product }) {
   const addItem = useCartStore((state) => state.addItem)
   const navigate = useNavigate()
   const analytics = useAnalytics()
-  const [selectedSize, setSelectedSize] = useState('')
+  const [selectedEuSize, setSelectedEuSize] = useState('')
+  const [selectedUsSize, setSelectedUsSize] = useState('')
 
   const isOnSale = product.sale_price && product.sale_price < product.price
   const discount = isOnSale ? calculateSalePercentage(product.price, product.sale_price) : 0
   const isApparel = product.category?.slug === 'apparels'
-  const sizeOptions = isApparel ? APPAREL_SIZES : SHOE_SIZES_EU
-  const formatShoeSizeLabel = (euSize) => {
-    const usMen = convertFromEU(euSize, 'US_MEN')
-    const usKids = convertFromEU(euSize, 'KIDS')
-    const usLabel = usMen ? `US ${usMen}` : usKids ? `US ${usKids} (Kids)` : null
-    return usLabel ? `EU ${euSize} / ${usLabel}` : `EU ${euSize}`
+
+  const availableEuSizes = useMemo(() => {
+    if (product.stock_quantity === 0) return []
+    if (product.sizes && Array.isArray(product.sizes)) {
+      return SHOE_SIZES_EU.filter(size => {
+        const sizeData = product.sizes.find(s => {
+          if (typeof s === 'object') return (s.size === size || s.value === size || s.name === size)
+          // Convert both to strings for comparison since sizes are stored as strings
+          return s.toString() === size.toString()
+        })
+        if (sizeData && typeof sizeData === 'object' && 'stock' in sizeData) return sizeData.stock > 0
+        return !!sizeData
+      })
+    }
+    return product.stock_quantity > 0 ? SHOE_SIZES_EU : []
+  }, [product.sizes, product.stock_quantity])
+
+  const isSizeAvailable = (size, type = 'EU') => {
+    if (type === 'EU') {
+      return availableEuSizes.includes(size)
+    }
+    const euSize = convertToEU(size, type)
+    return euSize ? availableEuSizes.includes(euSize) : false
   }
 
-  // Check if a size is available
-  const isSizeAvailable = (size) => {
-    // If product is out of stock, no sizes are available
+  const isApparelSizeAvailable = (size) => {
     if (product.stock_quantity === 0) return false
-
-    // If sizes field exists and has stock info
     if (product.sizes && Array.isArray(product.sizes)) {
-      // Check if sizes are objects with stock property
       const sizeData = product.sizes.find(s => {
-        if (typeof s === 'object') {
-          return s.size === size || s.value === size || s.name === size
-        }
-        return s === size
+        if (typeof s === 'object') return s.size === size || s.value === size || s.name === size
+        // Convert both to strings for comparison since sizes are stored as strings
+        return s.toString() === size.toString()
       })
-
-      // If size has stock property, check it
-      if (sizeData && typeof sizeData === 'object' && 'stock' in sizeData) {
-        return sizeData.stock > 0
-      }
-
-      // If size exists in array (as string or object without stock), it's available
+      if (sizeData && typeof sizeData === 'object' && 'stock' in sizeData) return sizeData.stock > 0
       return !!sizeData
     }
-
-    // Default: all sizes available if product has stock
     return product.stock_quantity > 0
+  }
+
+  const handleEuSizeChange = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const euSize = e.target.value ? Number(e.target.value) : ''
+    setSelectedEuSize(euSize)
+
+    if (euSize) {
+      const usMen = convertFromEU(euSize, 'US_MEN')
+      if (usMen) {
+        setSelectedUsSize(`${usMen}-US_MEN`)
+        return
+      }
+      const usKids = convertFromEU(euSize, 'KIDS')
+      if (usKids) {
+        setSelectedUsSize(`${usKids}-KIDS`)
+        return
+      }
+    }
+    setSelectedUsSize('')
+  }
+
+  const handleUsSizeChange = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const usSizeWithType = e.target.value
+    setSelectedUsSize(usSizeWithType)
+
+    if (usSizeWithType) {
+      const [size, type] = usSizeWithType.split('-')
+      const euSize = convertToEU(Number(size), type)
+      setSelectedEuSize(euSize || '')
+    } else {
+      setSelectedEuSize('')
+    }
   }
 
   const handleAddToCart = (e) => {
     e.preventDefault()
     e.stopPropagation()
 
-    if (!selectedSize) {
+    if (!selectedEuSize) {
       toast.error('Please select a size')
       analytics.trackButtonClick('add_to_cart_no_size', 'product_card', { product_id: product.id })
       return
     }
 
-    addItem(product, 1, selectedSize)
-    analytics.trackAddToCart(product, 1, selectedSize)
+    addItem(product, 1, selectedEuSize)
+    analytics.trackAddToCart(product, 1, selectedEuSize)
     analytics.trackButtonClick('add_to_cart', 'product_card', {
       product_id: product.id,
-      size: selectedSize
+      size: selectedEuSize
     })
-    toast.success(`${product.name} (${isApparel ? selectedSize : `EU ${selectedSize}`}) added to cart`)
-    setSelectedSize('') // Reset size after adding
+    toast.success(`${product.name} (EU ${selectedEuSize}) added to cart`)
+    setSelectedEuSize('')
+    setSelectedUsSize('')
   }
 
   const handleBuyNow = (e) => {
     e.preventDefault()
     e.stopPropagation()
 
-    if (!selectedSize) {
+    if (!selectedEuSize) {
       toast.error('Please select a size')
       analytics.trackButtonClick('buy_now_no_size', 'product_card', { product_id: product.id })
       return
     }
 
-    addItem(product, 1, selectedSize)
-    analytics.trackBuyNow(product, selectedSize)
+    addItem(product, 1, selectedEuSize)
+    analytics.trackBuyNow(product, selectedEuSize)
     analytics.trackButtonClick('buy_now', 'product_card', {
       product_id: product.id,
-      size: selectedSize
+      size: selectedEuSize
     })
     navigate('/checkout')
   }
-
-  const handleSizeChange = (e) => {
+  
+  const handleApparelSizeChange = (e) => {
     e.preventDefault()
     e.stopPropagation()
-    setSelectedSize(e.target.value)
+    setSelectedEuSize(e.target.value)
   }
 
   const imageUrl = product.images?.[0]?.url
@@ -151,29 +206,56 @@ export default function ProductCard({ product }) {
             <PriceDisplay price={product.price} salePrice={product.sale_price} showBadge={false} />
 
             {/* Size Selector */}
-            <select
-              value={selectedSize}
-              onChange={handleSizeChange}
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-              className="w-full mt-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-600"
-            >
-              <option value="">
-                {isApparel ? 'Select Size' : 'Select Size (EU / US)'}
-              </option>
-              {sizeOptions
-                .filter((size) => isSizeAvailable(size))
-                .map((size) => (
-                  <option key={size} value={size}>
-                    {isApparel ? size : formatShoeSizeLabel(size)}
+            {isApparel ? (
+               <select
+                value={selectedEuSize}
+                onChange={handleApparelSizeChange}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                className="w-full mt-3 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-600"
+              >
+                <option value="">Select Size</option>
+                {APPAREL_SIZES.map((size) => (
+                  <option key={size} value={size} disabled={!isApparelSizeAvailable(size)}>
+                    {size}
                   </option>
                 ))}
-            </select>
+              </select>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <select
+                  value={selectedEuSize}
+                  onChange={handleEuSizeChange}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-600"
+                >
+                  <option value="">EU Size</option>
+                  {SHOE_SIZES_EU.map((size) => (
+                    <option key={size} value={size} disabled={!isSizeAvailable(size)}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={selectedUsSize}
+                  onChange={handleUsSizeChange}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-600"
+                >
+                  <option value="">US Size</option>
+                  {ALL_US_SIZES.map(({ size, type }) => (
+                    <option key={`${size}-${type}`} value={`${size}-${type}`} disabled={!isSizeAvailable(size, type)}>
+                      {size} ({type.replace('US_', '').charAt(0)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Action Buttons */}
             <div className="flex gap-2 mt-2">
               <Button
                 onClick={handleAddToCart}
-                disabled={product.stock_quantity === 0}
+                disabled={product.stock_quantity === 0 || !selectedEuSize}
                 variant="secondary"
                 className="flex-1 flex items-center justify-center gap-2"
                 size="sm"
@@ -184,7 +266,7 @@ export default function ProductCard({ product }) {
 
               <Button
                 onClick={handleBuyNow}
-                disabled={product.stock_quantity === 0}
+                disabled={product.stock_quantity === 0 || !selectedEuSize}
                 className="flex-1 flex items-center justify-center gap-2"
                 size="sm"
               >

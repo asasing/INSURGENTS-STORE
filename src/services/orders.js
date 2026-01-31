@@ -145,7 +145,7 @@ export async function createMayaCheckoutSession(order) {
         amount: item.price
       })),
       redirectUrl: {
-        success: `${appUrl}/order-confirmation/${order.id}?status=success`,
+        success: `${appUrl}/order-success?order_id=${order.id}&payment_method=maya`,
         failure: `${appUrl}/order-confirmation/${order.id}?status=failed`,
         cancel: `${appUrl}/checkout?status=cancelled`
       },

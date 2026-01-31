@@ -43,6 +43,8 @@ export default function Orders() {
   const [methodFilter, setMethodFilter] = useState('all')
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [sortKey, setSortKey] = useState('created_at')
+  const [sortDir, setSortDir] = useState('desc')
 
   const { data: orders, isLoading } = useQuery({
     queryKey: ['orders'],
@@ -91,6 +93,37 @@ export default function Orders() {
       return matchesQuery && matchesStatus && matchesPayment && matchesMethod
     })
   }, [orders, paymentFilter, methodFilter, search, statusFilter])
+
+  const sortedOrders = useMemo(() => {
+    const dir = sortDir === 'asc' ? 1 : -1
+    return [...filteredOrders].sort((a, b) => {
+      const av = a[sortKey]
+      const bv = b[sortKey]
+      if (sortKey === 'total') return dir * (Number(av || 0) - Number(bv || 0))
+      if (sortKey === 'created_at') return dir * (new Date(av).getTime() - new Date(bv).getTime())
+      return dir * String(av ?? '').localeCompare(String(bv ?? ''))
+    })
+  }, [filteredOrders, sortDir, sortKey])
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+      return
+    }
+    setSortKey(key)
+    setSortDir('asc')
+  }
+
+  const sortLabel = (key, label) => (
+    <button
+      type="button"
+      onClick={() => toggleSort(key)}
+      className="inline-flex items-center gap-1"
+    >
+      <span>{label}</span>
+      {sortKey === key ? <span className="text-xs">{sortDir === 'asc' ? '▲' : '▼'}</span> : null}
+    </button>
+  )
 
   const allVisibleSelected = filteredOrders.length > 0 && filteredOrders.every((o) => selectedIds.has(o.id))
   const someVisibleSelected = filteredOrders.some((o) => selectedIds.has(o.id))
@@ -262,18 +295,19 @@ export default function Orders() {
                     className="w-5 h-5"
                   />
                 </th>
-                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Order</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Customer</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Total</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Payment</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Payment Status</th>
-                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Order Status</th>
+                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">{sortLabel('id', 'Order')}</th>
+                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">{sortLabel('created_at', 'Date')}</th>
+                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">{sortLabel('customer_name', 'Customer')}</th>
+                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">{sortLabel('total', 'Total')}</th>
+                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">{sortLabel('payment_method', 'Payment')}</th>
+                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">{sortLabel('payment_status', 'Payment Status')}</th>
+                <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">{sortLabel('status', 'Order Status')}</th>
                 <th className="py-3 px-4 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.length ? (
-                filteredOrders.map((order) => (
+              {sortedOrders.length ? (
+                sortedOrders.map((order) => (
                   <tr
                     key={order.id}
                     className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
@@ -290,6 +324,8 @@ export default function Orders() {
                       <div className="font-mono text-xs text-gray-600 dark:text-gray-400">
                         {order.id}
                       </div>
+                    </td>
+                    <td className="py-3 px-4">
                       <div className="text-xs text-gray-500 dark:text-gray-500">
                         {new Date(order.created_at).toLocaleString()}
                       </div>
@@ -359,7 +395,7 @@ export default function Orders() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
                     No orders found.
                   </td>
                 </tr>
