@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Package, ShoppingCart, MessageSquare, Timer, LayoutDashboard, LogOut, Settings } from 'lucide-react'
+import { Package, ShoppingCart, MessageSquare, Timer, LayoutDashboard, LogOut, Settings, ExternalLink, Store } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import ThemeToggle from './ThemeToggle'
 import toast from 'react-hot-toast'
@@ -11,7 +11,9 @@ const menuItems = [
   { path: '/admin/inventory', label: 'Inventory', icon: Package },
   { path: '/admin/promotions', label: 'Promotions', icon: Timer },
   { path: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
-  { path: '/admin/settings', label: 'Settings', icon: Settings }
+  { path: '/admin/settings', label: 'Settings', icon: Settings },
+  { url: '/', label: 'View Online Store', icon: Store, isExternal: true },
+  { url: 'https://ins-admin.vercel.app/', label: 'Store Operations', icon: ExternalLink, isExternal: true }
 ]
 
 export default function AdminLayout({ children }) {
@@ -33,8 +35,9 @@ export default function AdminLayout({ children }) {
           {/* Logo */}
           <div className="mb-8">
             <Link to="/" className="text-xl font-bold text-gray-900 dark:text-white">
-              Insurgents Admin
+              REMAfy
             </Link>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Online Store Admin</p>
           </div>
 
           {/* Navigation */}
@@ -42,10 +45,28 @@ export default function AdminLayout({ children }) {
             {menuItems.map((item) => {
               const Icon = item.icon
               const isActive = location.pathname === item.path
+              const key = item.path || item.url
 
+              // External link (opens in new tab)
+              if (item.isExternal) {
+                return (
+                  <a
+                    key={key}
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <Icon className="w-5 h-5" />
+                    {item.label}
+                  </a>
+                )
+              }
+
+              // Internal link
               return (
                 <Link
-                  key={item.path}
+                  key={key}
                   to={item.path}
                   className={cn(
                     'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors',
