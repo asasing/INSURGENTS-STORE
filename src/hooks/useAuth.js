@@ -5,6 +5,7 @@ export function useAuth() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [hasProfile, setHasProfile] = useState(false)
 
   useEffect(() => {
     // Check active session
@@ -26,6 +27,7 @@ export function useAuth() {
         checkAdminStatus(session.user.id)
       } else {
         setIsAdmin(false)
+        setHasProfile(false)
         setLoading(false)
       }
     })
@@ -42,14 +44,18 @@ export function useAuth() {
         .single()
 
       if (error) {
-        console.error('Error checking admin status:', error)
+        console.error('Error checking profile:', error)
         setIsAdmin(false)
+        setHasProfile(false)
       } else {
+        // User has a profile entry (admin, staff, or viewer)
+        setHasProfile(!!data)
         setIsAdmin(data?.role === 'admin')
       }
     } catch (error) {
-      console.error('Error checking admin status:', error)
+      console.error('Error checking profile:', error)
       setIsAdmin(false)
+      setHasProfile(false)
     } finally {
       setLoading(false)
     }
@@ -75,5 +81,5 @@ export function useAuth() {
     }
   }
 
-  return { user, loading, isAdmin, signIn, signOut }
+  return { user, loading, isAdmin, hasProfile, signIn, signOut }
 }

@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Package, ShoppingCart, MessageSquare, Timer, LayoutDashboard, LogOut, Settings, ExternalLink, Store } from 'lucide-react'
+import { Package, ShoppingCart, MessageSquare, Timer, LayoutDashboard, LogOut, Settings, ExternalLink, Store, User } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import ThemeToggle from './ThemeToggle'
 import toast from 'react-hot-toast'
@@ -11,15 +11,24 @@ const menuItems = [
   { path: '/admin/inventory', label: 'Inventory', icon: Package },
   { path: '/admin/promotions', label: 'Promotions', icon: Timer },
   { path: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
-  { path: '/admin/settings', label: 'Settings', icon: Settings },
+  { path: '/admin/settings', label: 'Settings', icon: Settings, adminOnly: true },
   { url: '/', label: 'View Online Store', icon: Store, isExternal: true },
   { url: 'https://ins-admin.vercel.app/', label: 'Store Operations', icon: ExternalLink, isExternal: true }
 ]
 
 export default function AdminLayout({ children }) {
-  const { signOut } = useAuth()
+  const { signOut, isAdmin, user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Filter menu items based on admin status
+  const visibleMenuItems = menuItems.filter(item => !item.adminOnly || isAdmin)
+
+  // Get role badge color
+  const getRoleBadgeColor = () => {
+    if (isAdmin) return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+    return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+  }
 
   const handleSignOut = async () => {
     await signOut()
@@ -42,7 +51,7 @@ export default function AdminLayout({ children }) {
 
           {/* Navigation */}
           <nav className="flex-1 space-y-2">
-            {menuItems.map((item) => {
+            {visibleMenuItems.map((item) => {
               const Icon = item.icon
               const isActive = location.pathname === item.path
               const key = item.path || item.url
@@ -96,8 +105,52 @@ export default function AdminLayout({ children }) {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="ml-64 p-8">{children}</main>
+      {/* Main Content Area */}
+      <div className="ml-64">
+        {/* Top Bar */}
+        <header className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-4">
+          <div className="flex items-center justify-between">
+            {/* Page Title / Breadcrumb (optional - can be added later) */}
+            <div className="flex-1">
+              {/* Empty for now, can add breadcrumbs or page title here */}
+            </div>
+
+            {/* User Info & Actions */}
+            <div className="flex items-center gap-4">
+              {/* User Info */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                  <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                      {user?.email || 'User'}
+                    </span>
+                    <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', getRoleBadgeColor())}>
+                      {isAdmin ? 'Admin' : 'Staff'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Theme Toggle */}
+              <ThemeToggle />
+
+              {/* Logout Button */}
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="text-sm">Logout</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="p-8">{children}</main>
+      </div>
     </div>
   )
 }

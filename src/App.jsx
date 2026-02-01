@@ -19,8 +19,12 @@ import Footer from './components/layout/Footer'
 import SaleTimer from './components/product/SaleTimer'
 import AdminLayout from './components/layout/AdminLayout'
 import ProtectedRoute from './components/layout/ProtectedRoute'
+import { useSiteSettings } from './hooks/useSiteSettings'
 
 function App() {
+  // Load site settings and update favicon/title dynamically
+  useSiteSettings()
+
   return (
     <Router>
       <Routes>

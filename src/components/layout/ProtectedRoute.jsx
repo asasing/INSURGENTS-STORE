@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth'
 import Spinner from '../common/Spinner'
 
 export default function ProtectedRoute({ children }) {
-  const { user, loading, isAdmin } = useAuth()
+  const { user, loading, hasProfile } = useAuth()
 
   if (loading) {
     return (
@@ -13,7 +13,8 @@ export default function ProtectedRoute({ children }) {
     )
   }
 
-  if (!user || !isAdmin) {
+  // Allow any user with a profile (admin, staff, or viewer)
+  if (!user || !hasProfile) {
     return <Navigate to="/admin/login" replace />
   }
 
