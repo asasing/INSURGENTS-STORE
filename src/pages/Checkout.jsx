@@ -130,8 +130,8 @@ export default function Checkout() {
           fallback_mode: checkout.fallbackMode
         })
 
-        // Clear cart
-        clearCart()
+        // Note: Cart will be cleared after successful payment confirmation
+        // Don't clear cart here - user might cancel payment
 
         // Show success message
         if (checkout.fallbackMode) {
@@ -151,7 +151,7 @@ export default function Checkout() {
           order_id: order.id,
           error: mayaError.message
         })
-        clearCart()
+        // Don't clear cart - let user retry
         toast.error('Payment gateway error. Please contact support with your order ID.')
         navigate(`/order-confirmation/${order.id}`)
       }

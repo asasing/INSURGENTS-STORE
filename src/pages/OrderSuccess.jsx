@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { useCartStore } from '../store/cartStore';
 import Button from '../components/common/Button';
 
 const OrderSuccess = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { clearCart } = useCartStore();
 
   // For COD, data is in location.state
   const codData = location.state;
@@ -15,6 +17,14 @@ const OrderSuccess = () => {
 
   const orderId = codData?.orderId || mayaOrderId;
   const paymentMethod = codData?.paymentMethod || mayaPaymentMethod;
+
+  // Clear cart when COD order success page loads
+  useEffect(() => {
+    if (codData?.orderId) {
+      clearCart();
+      localStorage.removeItem('last_order_id');
+    }
+  }, [codData, clearCart]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 text-center px-4">

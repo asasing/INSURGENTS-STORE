@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { CheckCircle, Package } from 'lucide-react'
 import { getOrderById, updateOrder } from '../services/orders'
+import { useCartStore } from '../store/cartStore'
 import Button from '../components/common/Button'
 import Card from '../components/common/Card'
 import Spinner from '../components/common/Spinner'
@@ -10,9 +11,11 @@ import { formatPrice } from '../lib/utils'
 export default function OrderConfirmation() {
   const { orderId } = useParams()
   const [searchParams] = useSearchParams()
+  const { clearCart } = useCartStore()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [statusSynced, setStatusSynced] = useState(false)
+  const [cartCleared, setCartCleared] = useState(false)
 
   useEffect(() => {
     if (orderId) {
@@ -57,6 +60,25 @@ export default function OrderConfirmation() {
       .catch((error) => console.error('Failed to sync order status:', error))
       .finally(() => setStatusSynced(true))
   }, [order, searchParams, statusSynced])
+
+  // Clear cart only after successful payment
+  useEffect(() => {
+    if (!order || cartCleared) return
+    
+    const status = searchParams.get('status')
+    
+    // Clear cart if payment was successful or if it's a COD order that's confirmed
+    const shouldClearCart = 
+      status === 'success' || 
+      (order.payment_method === 'cod' && order.payment_status === 'pending')
+    
+    if (shouldClearCart) {
+      clearCart()
+      setCartCleared(true)
+      // Clean up the last_order_id from localStorage
+      localStorage.removeItem('last_order_id')
+    }
+  }, [order, searchParams, cartCleared, clearCart])
 
   if (loading) {
     return (
