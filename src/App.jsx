@@ -11,6 +11,8 @@ import Login from './pages/admin/Login'
 import Dashboard from './pages/admin/Dashboard'
 import Orders from './pages/admin/Orders'
 import Inventory from './pages/admin/Inventory'
+import DiscountsAndPromos from './pages/admin/DiscountsAndPromos'
+import ShippingZones from './pages/admin/ShippingZones'
 import Promotions from './pages/admin/Promotions'
 import Testimonials from './pages/admin/Testimonials'
 import Settings from './pages/admin/Settings'
@@ -132,6 +134,26 @@ function App() {
             <ProtectedRoute>
               <AdminLayout>
                 <Inventory />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/discounts"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <DiscountsAndPromos />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/shipping"
+          element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <ShippingZones />
               </AdminLayout>
             </ProtectedRoute>
           }

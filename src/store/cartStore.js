@@ -5,6 +5,7 @@ export const useCartStore = create(
   persist(
     (set, get) => ({
       items: [],
+      promoCode: null,
 
       addItem: (product, quantity = 1, selectedSize = null, selectedColor = null) =>
         set((state) => {
@@ -58,13 +59,34 @@ export const useCartStore = create(
           )
         })),
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], promoCode: null }),
 
+      // Promo code methods
+      setPromoCode: (promoCode) => set({ promoCode }),
+
+      clearPromoCode: () => set({ promoCode: null }),
+
+      // Get subtotal (before promo discount)
       getTotal: () => {
         const items = get().items
         return items.reduce((total, item) => {
           const price = item.sale_price || item.price
           return total + price * item.quantity
+        }, 0)
+      },
+
+      // Alias for getTotal for clarity
+      getSubtotal: () => get().getTotal(),
+
+      // Calculate total product discount amount
+      getTotalProductDiscount: () => {
+        const items = get().items
+        return items.reduce((total, item) => {
+          if (item.sale_price && item.sale_price < item.price) {
+            const discountPerItem = item.price - item.sale_price
+            return total + discountPerItem * item.quantity
+          }
+          return total
         }, 0)
       },
 

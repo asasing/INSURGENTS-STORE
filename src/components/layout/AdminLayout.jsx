@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Package, ShoppingCart, MessageSquare, Timer, LayoutDashboard, LogOut, Settings, ExternalLink, Store, User } from 'lucide-react'
+import { Package, ShoppingCart, MessageSquare, Timer, LayoutDashboard, LogOut, Settings, ExternalLink, Store, User, Tag, Truck } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import ThemeToggle from './ThemeToggle'
 import toast from 'react-hot-toast'
@@ -9,6 +9,8 @@ const menuItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { path: '/admin/inventory', label: 'Inventory', icon: Package },
+  { path: '/admin/discounts', label: 'Discounts & Promos', icon: Tag },
+  { path: '/admin/shipping', label: 'Shipping Zones', icon: Truck },
   { path: '/admin/promotions', label: 'Promotions', icon: Timer },
   { path: '/admin/testimonials', label: 'Testimonials', icon: MessageSquare },
   { path: '/admin/settings', label: 'Settings', icon: Settings, adminOnly: true },

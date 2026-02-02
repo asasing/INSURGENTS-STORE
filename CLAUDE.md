@@ -4,7 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Insurgents Store is a modern, mobile-first e-commerce platform for shoes and apparel built with React, Vite, Tailwind CSS, and Supabase. The store features a complete shopping experience with cart management, checkout flow with Maya payment integration, admin dashboard for inventory management, and a black/white/gray theme with dark mode support.
+Insurgents Store is a modern, mobile-first e-commerce platform for shoes and apparel built with React, Vite, Tailwind CSS, and Supabase. The store features:
+
+- Complete shopping cart and checkout flow with Maya payment integration
+- Time-based discount system with priority resolution (product and category-level)
+- Promo code system with usage tracking and free shipping support
+- Location-based shipping zones with fuzzy city matching
+- Admin dashboard for inventory, discounts, orders, and settings management
+- PostHog analytics integration for conversion tracking
+- Black/white/gray theme with dark mode support
 
 ## Development Commands
 
@@ -31,12 +39,19 @@ VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 VITE_MAYA_PUBLIC_KEY=your-maya-public-key
 VITE_MAYA_SECRET_KEY=your-maya-secret-key
 VITE_MAYA_API_BASE=https://pg-sandbox.paymaya.com
+VITE_PUBLIC_POSTHOG_KEY=your-posthog-key
+VITE_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 ```
 
 **Maya Configuration:**
 - Use `https://pg-sandbox.paymaya.com` for development/testing
 - Use `https://pg.paymaya.com` for production
 - In Vercel, set `VITE_MAYA_API_BASE` to production URL for live deployment
+
+**PostHog Configuration (optional):**
+- Set `VITE_PUBLIC_POSTHOG_KEY` and `VITE_PUBLIC_POSTHOG_HOST` to enable analytics
+- Omitting these variables disables analytics tracking
+- See `ANALYTICS-TRACKING.md` and `POSTHOG-GUIDE.md` for detailed setup
 
 ## Architecture Overview
 
@@ -66,10 +81,14 @@ VITE_MAYA_API_BASE=https://pg-sandbox.paymaya.com
 
 **Key Tables:**
 - `online_products`: Product catalog with pricing, images (JSONB), inventory, categories
-- `online_orders`: Customer orders with JSONB items array, shipping address, status tracking
+- `online_orders`: Customer orders with JSONB items array, shipping address, status tracking, promo codes, shipping fees
 - `online_categories`: Product categories with slugs for routing
 - `online_sale_promotions`: Sale timers with end dates
 - `online_testimonials`: Customer reviews with approval status
+- `online_discounts`: Product/category discount rules with priority, date ranges (replaces sale_price column)
+- `online_discount_products`: Junction table linking discounts to specific products (for manual application)
+- `online_promo_codes`: Checkout-level promo codes with usage tracking and minimum order amounts
+- `online_shipping_zones`: Location-based shipping zones with city arrays and fee amounts
 - `site_settings`: Key-value pairs for site configuration (logo URL, site name, etc.)
 
 **Storage Buckets:**
@@ -88,8 +107,11 @@ VITE_MAYA_API_BASE=https://pg-sandbox.paymaya.com
 **Admin Routes (protected, with AdminLayout):**
 - `/admin/login` - Admin authentication
 - `/admin/dashboard` - Overview stats
+- `/admin/orders` - Order management and tracking
 - `/admin/inventory` - Product CRUD
-- `/admin/sales` - Sale promotion management
+- `/admin/discounts` - Discount & promo code management
+- `/admin/shipping` - Shipping zone configuration
+- `/admin/promotions` - Sale promotion timers
 - `/admin/testimonials` - Review moderation
 - `/admin/settings` - Logo/site configuration
 
@@ -115,8 +137,11 @@ export async function getProducts(filters = {}) {
 
 **Key Services:**
 - `products.js`: Product CRUD, filtering, sorting (name, price, discount, latest)
-- `orders.js`: Order creation, Maya checkout session creation
+- `orders.js`: Order creation, Maya checkout session creation, promo code application
 - `maya.js`: Maya Checkout API integration (creates checkout sessions with locked amounts)
+- `discounts.js`: Discount CRUD, priority-based discount resolution, product enrichment with active discounts
+- `promoCodes.js`: Promo code validation, discount calculation, usage tracking
+- `shipping.js`: Shipping zone CRUD, location-based fee calculation with fuzzy city matching
 - `storage.js`: Image upload to Supabase Storage (has separate functions for products vs assets)
 - `settings.js`: Site settings CRUD (logo, site name, etc.)
 
@@ -159,6 +184,131 @@ export async function getProducts(filters = {}) {
 - `src/pages/Checkout.jsx`: Form + LoadingModal + checkout flow
 
 **Important:** The amount is locked on Maya's side. Users cannot modify it. This replaced the old payment link approach where amount was editable.
+
+### Discount Management System
+
+**Architecture:** Replaces the legacy `sale_price` column with a flexible discount system supporting time-based rules and priority resolution.
+
+**Discount Types:**
+1. **Manual Application:** Link discounts to specific products via junction table (`online_discount_products`)
+2. **Category Application:** Apply discounts to all products in specified categories (uses `category_ids` array)
+
+**Discount Calculation:**
+- `percentage`: Reduces price by X% (e.g., 20% off)
+- `fixed_amount`: Reduces price by fixed amount (e.g., ₱100 off)
+
+**Priority Resolution:**
+- Multiple discounts can apply to a product (manual + category)
+- Highest `priority` value wins (default: 0)
+- Active discounts checked against date range (`start_date` to `end_date`)
+
+**Product Enrichment Flow:**
+1. Products fetched from database
+2. `enrichProductsWithDiscounts()` called in `src/services/discounts.js`
+3. Function queries both manual and category-based discounts
+4. Applies highest-priority active discount per product
+5. Sets `sale_price` and `active_discount` fields on product object
+6. Products display with calculated discount pricing
+
+**Key Functions:**
+- `getProductDiscount(productId, categoryIds)`: Get active discount for a product
+- `enrichProductsWithDiscounts(products)`: Batch enrich products with discount data
+- `calculateDiscountedPrice(originalPrice, discount)`: Calculate final price
+
+**Location:** `src/services/discounts.js`, Admin UI at `/admin/discounts`
+
+### Promo Code System
+
+**Purpose:** Checkout-level discount codes that customers enter at checkout (separate from product discounts).
+
+**Promo Code Types:**
+- `percentage`: X% off order subtotal
+- `fixed_amount`: Fixed amount off order subtotal
+- `free_shipping`: Waives shipping fee
+
+**Validation Rules:**
+- Case-insensitive code matching (stored uppercase)
+- Date range validation (`start_date` to `end_date`)
+- Usage limit tracking (`usage_limit` vs `times_used`)
+- Minimum order amount requirement (`min_order_amount`)
+- Active status check (`is_active`)
+
+**Application Flow:**
+1. User enters promo code at checkout
+2. `validatePromoCode(code, orderTotal)` validates all rules
+3. If valid, `calculatePromoDiscount()` computes discount amount
+4. Discount applied to order subtotal (after product discounts)
+5. `incrementPromoCodeUsage()` called after successful order
+
+**Cart Integration:**
+- Cart store (`src/store/cartStore.js`) has `promoCode` state
+- `setPromoCode(promoCode)` and `clearPromoCode()` methods
+- Promo code persists in localStorage with cart
+
+**Location:** `src/services/promoCodes.js`, Admin UI at `/admin/discounts` (same page as discounts)
+
+### Shipping Zone System
+
+**Purpose:** Location-based shipping fee calculation using city matching.
+
+**Data Structure:**
+- `name`: Zone display name (e.g., "Free Shipping Zone")
+- `cities`: Array of city names for matching (e.g., `['Cebu City', 'Mandaue City']`)
+- `shipping_fee`: Fee amount in PHP
+- `display_order`: Sort order for matching priority
+- `is_active`: Enable/disable zone
+
+**Fee Calculation:**
+- `calculateShippingFee(city, hasFreeShippingPromo)` in `src/services/shipping.js`
+- Normalizes city name (lowercase, trimmed)
+- Uses fuzzy matching (substring matching) to handle spelling variations
+- Checks zones in `display_order` sequence
+- Returns first matching zone's fee
+- Falls back to last zone (highest fee) if no match
+- Free shipping promo overrides all zones (returns ₱0)
+
+**Example Zones:**
+1. Free Shipping Zone (Cebu City, Mandaue City) - ₱0
+2. Cebu Province (Other Cebu Cities) - ₱100
+3. Outside Cebu (Default fallback) - ₱200
+
+**Checkout Integration:**
+- City entered in checkout form
+- Shipping fee calculated on form submit
+- Fee stored in `online_orders.shipping_fee` and `shipping_zone_id`
+
+**Location:** `src/services/shipping.js`, Admin UI at `/admin/shipping`
+
+### PostHog Analytics Integration
+
+**Purpose:** Track user behavior, conversions, and product performance.
+
+**Configuration:**
+- Environment variables: `VITE_PUBLIC_POSTHOG_KEY`, `VITE_PUBLIC_POSTHOG_HOST`
+- Initialized in `src/main.jsx` with PostHogProvider
+- Custom hook: `useAnalytics()` in `src/lib/analytics.js`
+
+**Key Events Tracked:**
+- `product_viewed`: Product detail page views
+- `add_to_cart`: Items added to cart (with size, price, quantity)
+- `remove_from_cart`: Items removed from cart
+- `cart_viewed`: Cart page views
+- `checkout_started`: Checkout initiation with cart summary
+- `purchase_completed`: Successful orders
+- `category_viewed`: Category page views
+- `theme_toggled`: Dark/light mode switches
+- `filter_used`, `sort_used`: Product filtering and sorting
+
+**Usage Pattern:**
+```javascript
+const analytics = useAnalytics()
+analytics.trackProductView(product)
+analytics.trackAddToCart(product, quantity, size)
+```
+
+**Privacy:** Users can disable tracking via analytics toggle in UI (see `src/components/common/AnalyticsToggle.jsx`)
+
+**Location:** `src/lib/analytics.js`, initialized in `src/main.jsx`
 
 ### Styling Conventions
 
@@ -204,13 +354,32 @@ export async function getProducts(filters = {}) {
 **Key Behavior:**
 - Cart items identified by `cartItemId` (combination of product ID + size + color + timestamp)
 - Supports same product with different sizes/colors as separate cart items
-- Price calculation uses `sale_price` if available, otherwise `price`
+- Price calculation uses `sale_price` if available (from discounts), otherwise `price`
+- Promo code stored alongside cart items
 - Persisted to localStorage automatically via Zustand persist middleware
 
-**Methods:**
+**Core Methods:**
 ```javascript
-const { items, addItem, removeItem, updateQuantity, clearCart, getTotal } = useCartStore()
+const {
+  items,
+  promoCode,
+  addItem,
+  removeItem,
+  updateQuantity,
+  updateSize,
+  clearCart,
+  getTotal,
+  getSubtotal,
+  getTotalProductDiscount,
+  setPromoCode,
+  clearPromoCode
+} = useCartStore()
 ```
+
+**Pricing Calculations:**
+- `getSubtotal()`: Sum of all items (using sale_price if available)
+- `getTotalProductDiscount()`: Total savings from product-level discounts
+- Promo code discount calculated separately at checkout via `promoCodes.js`
 
 ### Admin Authentication
 
@@ -263,6 +432,29 @@ const { register, handleSubmit, formState: { errors } } = useForm({
 
 **Example:** `src/pages/Checkout.jsx` has comprehensive validation schema.
 
+### Discount System Migration Pattern
+
+**Legacy Approach (deprecated):**
+- Products had `sale_price` column set manually
+- Required manual updates per product
+- No expiration dates or automatic scheduling
+
+**Current Approach (active):**
+- Discounts defined separately with date ranges and priorities
+- `enrichProductsWithDiscounts()` calculates and applies discounts dynamically
+- Products enriched at query time with `sale_price` field
+- Migration script: `supabase/migrate-sale-prices-to-discounts.sql`
+
+**When fetching products:**
+```javascript
+// In product hooks (useProducts, useCategories)
+const products = await getProducts(filters)
+const enrichedProducts = await enrichProductsWithDiscounts(products)
+// Now products have calculated sale_price based on active discounts
+```
+
+**Important:** Always call `enrichProductsWithDiscounts()` after fetching products to ensure discount prices are current.
+
 ## Database Guidelines
 
 ### Adding New Tables
@@ -305,6 +497,52 @@ Use `supabase/create-assets-bucket.sql` as template. Key requirements:
 2. For loading states, use `LoadingModal` component
 3. Control with useState: `const [isOpen, setIsOpen] = useState(false)`
 
+### Creating Product Discounts
+
+**For category-wide sales:**
+1. Navigate to `/admin/discounts`
+2. Create discount with `application_type: 'category'`
+3. Select target categories in `category_ids` array
+4. Set percentage or fixed amount, date range, priority
+5. Products in those categories automatically show discounted prices
+
+**For specific product discounts:**
+1. Navigate to `/admin/discounts`
+2. Create discount with `application_type: 'manual'`
+3. Select specific products to link
+4. Junction table (`online_discount_products`) tracks associations
+5. Only selected products show discounted prices
+
+**Priority matters:** If a product matches multiple discounts (e.g., both manual + category), highest priority wins.
+
+### Setting Up Promo Codes
+
+1. Navigate to `/admin/discounts` (Promo Codes tab)
+2. Create promo code with:
+   - Unique code (e.g., "SUMMER2024") - stored uppercase
+   - Discount type: percentage, fixed_amount, or free_shipping
+   - Minimum order amount (optional)
+   - Usage limit (optional, null = unlimited)
+   - Date range
+3. Customers enter code at checkout
+4. System validates and applies discount automatically
+5. Usage counter increments after successful orders
+
+### Configuring Shipping Zones
+
+1. Navigate to `/admin/shipping`
+2. Create zones in priority order (display_order):
+   - Lower display_order = checked first
+   - First matching zone wins
+3. Add city names to `cities` array
+4. System uses fuzzy matching (handles typos, variations)
+5. Last zone acts as fallback for unmatched cities
+
+**Example setup:**
+- Zone 1: Free Shipping (display_order: 1) - Cebu City, Mandaue
+- Zone 2: Provincial (display_order: 2) - Other Cebu cities
+- Zone 3: Default (display_order: 3) - Everywhere else (fallback)
+
 ## Testing the Maya Integration
 
 **Sandbox Mode:** Set `VITE_MAYA_API_BASE=https://pg-sandbox.paymaya.com` in `.env`
@@ -324,11 +562,15 @@ Use `supabase/create-assets-bucket.sql` as template. Key requirements:
 ## Key Files to Check Before Making Changes
 
 - `src/App.jsx`: All route definitions
-- `src/main.jsx`: React Query config, Toaster config
+- `src/main.jsx`: React Query config, Toaster config, PostHog initialization
 - `tailwind.config.js`: Theme colors
 - `src/services/products.js`: Product filtering/sorting logic
-- `src/services/orders.js`: Order creation and Maya integration
-- `src/store/cartStore.js`: Cart state management
+- `src/services/orders.js`: Order creation, Maya integration, promo code application
+- `src/services/discounts.js`: Discount system logic and product enrichment
+- `src/services/promoCodes.js`: Promo code validation and calculation
+- `src/services/shipping.js`: Shipping zone matching and fee calculation
+- `src/store/cartStore.js`: Cart state management, promo code storage
+- `src/lib/analytics.js`: PostHog event tracking functions
 - `.env`: Environment variables (never commit this file)
 
 ## SQL Scripts Reference
@@ -336,6 +578,8 @@ Use `supabase/create-assets-bucket.sql` as template. Key requirements:
 Located in `supabase/` directory:
 
 - `create-online-tables-fresh.sql`: Creates all e-commerce tables
+- `create-discount-promo-shipping-tables.sql`: Creates discount, promo code, and shipping zone tables
+- `migrate-sale-prices-to-discounts.sql`: Migrates existing sale_price values to discount system
 - `create-assets-bucket.sql`: Sets up AssetsYour storage bucket
 - `create-site-settings.sql`: Creates site_settings table
 - `sample-products-seed.sql`: Sample product data
@@ -358,6 +602,20 @@ Located in `supabase/` directory:
 - Navigation collapses to hamburger menu
 - Cart and checkout forms are mobile-optimized
 - Product grid responsive (1 column mobile, 2-4 desktop)
+
+### Discount and Pricing System
+- Always enrich products with discounts after fetching from database
+- Discount system supports overlapping rules - priority determines winner
+- Product discounts (sale_price) apply before promo codes at checkout
+- Order breakdown: subtotal → product discounts → promo code → shipping → total
+- Expired discounts automatically filtered by date range queries
+- Promo codes are case-insensitive, stored uppercase for consistency
+
+### Analytics and Tracking
+- PostHog events fire client-side - ensure analytics hook used in key flows
+- Users can opt-out via analytics toggle (respects privacy)
+- Track key conversion events: product views, add to cart, checkout, purchase
+- Review PostHog dashboard regularly to identify drop-off points
 
 ---
 

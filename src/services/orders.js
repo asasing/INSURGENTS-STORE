@@ -1,9 +1,25 @@
 import { supabase } from '../lib/supabase'
+import { calculateShippingFee } from './shipping'
+import { calculatePromoDiscount, incrementPromoCodeUsage } from './promoCodes'
 
 export async function createOrder(orderData) {
   try {
     const paymentMethod = orderData.paymentMethod || 'maya'
     const paymentStatus = orderData.paymentStatus || (paymentMethod === 'cod' ? 'pending' : 'pending')
+
+    // Calculate shipping fee
+    const city = orderData.shippingAddress?.city || ''
+    const hasFreeShipping = orderData.promoCode?.discount_type === 'free_shipping'
+    const { fee: shippingFee, zone } = await calculateShippingFee(city, hasFreeShipping)
+
+    // Calculate final total
+    const subtotal = orderData.subtotal || orderData.total
+    const discountAmount = orderData.discountAmount || 0
+    const promoDiscount = orderData.promoCode
+      ? calculatePromoDiscount(orderData.promoCode, subtotal)
+      : 0
+    const finalTotal = Math.max(0, subtotal - discountAmount - promoDiscount + shippingFee)
+
     const { data, error } = await supabase
       .from('online_orders')
       .insert({
@@ -11,7 +27,14 @@ export async function createOrder(orderData) {
         customer_name: orderData.customerName,
         customer_phone: orderData.customerPhone,
         items: orderData.items,
-        total: orderData.total,
+        subtotal: subtotal,
+        discount_amount: discountAmount,
+        promo_code: orderData.promoCode?.code || null,
+        promo_discount: promoDiscount,
+        shipping_fee: shippingFee,
+        shipping_city: city,
+        shipping_zone_id: zone?.id || null,
+        total: finalTotal,
         shipping_address: orderData.shippingAddress,
         status: orderData.status || 'pending',
         payment_method: paymentMethod,
@@ -21,6 +44,12 @@ export async function createOrder(orderData) {
       .single()
 
     if (error) throw error
+
+    // Increment promo code usage if used
+    if (orderData.promoCode?.code) {
+      await incrementPromoCodeUsage(orderData.promoCode.code)
+    }
+
     return data
   } catch (error) {
     console.error('Error creating order:', error)

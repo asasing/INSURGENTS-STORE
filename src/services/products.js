@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { enrichProductsWithDiscounts } from './discounts'
 
 /**
  * Helper function to enrich products with category data when using category_ids array
@@ -114,6 +115,9 @@ export async function getProducts(filters = {}) {
     // Enrich products with categories if using category_ids array
     let products = await enrichProductsWithCategories(data)
 
+    // Enrich products with active discounts
+    products = await enrichProductsWithDiscounts(products)
+
     // Calculate discount percentage and sort by discount if needed
     products = products.map(product => ({
       ...product,
@@ -154,7 +158,11 @@ export async function getProductById(id) {
     if (error) throw error
 
     // Enrich with categories if using category_ids array
-    const enriched = await enrichProductsWithCategories([data])
+    let enriched = await enrichProductsWithCategories([data])
+
+    // Enrich with active discounts
+    enriched = await enrichProductsWithDiscounts(enriched)
+
     return enriched[0]
   } catch (error) {
     console.error('Error fetching product:', error)
