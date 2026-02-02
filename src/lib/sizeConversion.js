@@ -1,44 +1,57 @@
 /**
  * Size conversion utilities for shoes
- * Reference: Standard international shoe size conversion
+ * Reference: Standard international shoe size conversion (Nike/Adidas)
+ * Measurements based on foot length in centimeters
  */
 
-// Complete size conversion table
+// Complete size conversion table (Based on Nike/Adidas standard sizing)
+// Includes foot length measurements in cm (for size chart display)
 export const SIZE_CONVERSION_TABLE = {
-  // EU -> US Men, US Women, Kids
-  35: { EU: 35, US_MEN: 3, US_WOMEN: 5, KIDS: null },
-  36: { EU: 36, US_MEN: 4, US_WOMEN: 6, KIDS: null },
-  37: { EU: 37, US_MEN: 5, US_WOMEN: 7, KIDS: null },
-  38: { EU: 38, US_MEN: 6, US_WOMEN: 8, KIDS: null },
-  39: { EU: 39, US_MEN: 7, US_WOMEN: 9, KIDS: null },
-  40: { EU: 40, US_MEN: 8, US_WOMEN: 10, KIDS: null },
-  41: { EU: 41, US_MEN: 9, US_WOMEN: 11, KIDS: null },
-  42: { EU: 42, US_MEN: 10, US_WOMEN: 12, KIDS: null },
-  43: { EU: 43, US_MEN: 11, US_WOMEN: 13, KIDS: null },
-  44: { EU: 44, US_MEN: 12, US_WOMEN: 14, KIDS: null },
-  45: { EU: 45, US_MEN: 13, US_WOMEN: 15, KIDS: null },
-  46: { EU: 46, US_MEN: 14, US_WOMEN: 16, KIDS: null },
-  47: { EU: 47, US_MEN: 15, US_WOMEN: 17, KIDS: null },
-  48: { EU: 48, US_MEN: 16, US_WOMEN: 18, KIDS: null },
+  // EU -> US Men, US Women, Kids, Foot Length (cm)
+  35: { EU: 35, US_MEN: 3.5, US_WOMEN: 5, KIDS: null, FOOT_LENGTH_CM: 22.5 },
+  35.5: { EU: 35.5, US_MEN: 4, US_WOMEN: 5.5, KIDS: null, FOOT_LENGTH_CM: 22.8 },
+  36: { EU: 36, US_MEN: 4.5, US_WOMEN: 6, KIDS: null, FOOT_LENGTH_CM: 23.0 },
+  36.5: { EU: 36.5, US_MEN: 5, US_WOMEN: 6.5, KIDS: null, FOOT_LENGTH_CM: 23.3 },
+  37: { EU: 37, US_MEN: 5, US_WOMEN: 6.5, KIDS: null, FOOT_LENGTH_CM: 23.5 },
+  37.5: { EU: 37.5, US_MEN: 5.5, US_WOMEN: 7, KIDS: null, FOOT_LENGTH_CM: 23.8 },
+  38: { EU: 38, US_MEN: 5.5, US_WOMEN: 7.5, KIDS: null, FOOT_LENGTH_CM: 24.0 },
+  38.5: { EU: 38.5, US_MEN: 6, US_WOMEN: 8, KIDS: null, FOOT_LENGTH_CM: 24.3 },
+  39: { EU: 39, US_MEN: 6.5, US_WOMEN: 8.5, KIDS: null, FOOT_LENGTH_CM: 24.5 },
+  40: { EU: 40, US_MEN: 7, US_WOMEN: 9, KIDS: null, FOOT_LENGTH_CM: 25.0 },
+  40.5: { EU: 40.5, US_MEN: 7.5, US_WOMEN: 9.5, KIDS: null, FOOT_LENGTH_CM: 25.3 },
+  41: { EU: 41, US_MEN: 8, US_WOMEN: 10, KIDS: null, FOOT_LENGTH_CM: 26.0 },
+  42: { EU: 42, US_MEN: 8.5, US_WOMEN: 10.5, KIDS: null, FOOT_LENGTH_CM: 26.5 },
+  42.5: { EU: 42.5, US_MEN: 9, US_WOMEN: 11, KIDS: null, FOOT_LENGTH_CM: 26.8 },
+  43: { EU: 43, US_MEN: 9.5, US_WOMEN: 11.5, KIDS: null, FOOT_LENGTH_CM: 27.0 },
+  44: { EU: 44, US_MEN: 10, US_WOMEN: 12, KIDS: null, FOOT_LENGTH_CM: 27.5 },
+  44.5: { EU: 44.5, US_MEN: 10.5, US_WOMEN: 12.5, KIDS: null, FOOT_LENGTH_CM: 28.0 },
+  45: { EU: 45, US_MEN: 11, US_WOMEN: 13, KIDS: null, FOOT_LENGTH_CM: 28.5 },
+  45.5: { EU: 45.5, US_MEN: 11.5, US_WOMEN: 13.5, KIDS: null, FOOT_LENGTH_CM: 29.0 },
+  46: { EU: 46, US_MEN: 12, US_WOMEN: 14, KIDS: null, FOOT_LENGTH_CM: 29.5 },
+  47: { EU: 47, US_MEN: 13, US_WOMEN: 15, KIDS: null, FOOT_LENGTH_CM: 30.0 },
+  47.5: { EU: 47.5, US_MEN: 13.5, US_WOMEN: 15.5, KIDS: null, FOOT_LENGTH_CM: 30.5 },
+  48: { EU: 48, US_MEN: 14, US_WOMEN: 16, KIDS: null, FOOT_LENGTH_CM: 31.0 },
+  48.5: { EU: 48.5, US_MEN: 14.5, US_WOMEN: 16.5, KIDS: null, FOOT_LENGTH_CM: 31.5 },
+  49: { EU: 49, US_MEN: 15, US_WOMEN: 17, KIDS: null, FOOT_LENGTH_CM: 32.0 },
 
   // Kids sizes (EU 24-34)
-  24: { EU: 24, US_MEN: null, US_WOMEN: null, KIDS: 7.5 },
-  25: { EU: 25, US_MEN: null, US_WOMEN: null, KIDS: 8 },
-  26: { EU: 26, US_MEN: null, US_WOMEN: null, KIDS: 9 },
-  27: { EU: 27, US_MEN: null, US_WOMEN: null, KIDS: 10 },
-  28: { EU: 28, US_MEN: null, US_WOMEN: null, KIDS: 11 },
-  29: { EU: 29, US_MEN: null, US_WOMEN: null, KIDS: 11.5 },
-  30: { EU: 30, US_MEN: null, US_WOMEN: null, KIDS: 12 },
-  31: { EU: 31, US_MEN: null, US_WOMEN: null, KIDS: 13 },
-  32: { EU: 32, US_MEN: null, US_WOMEN: null, KIDS: 1 },
-  33: { EU: 33, US_MEN: null, US_WOMEN: null, KIDS: 2 },
-  34: { EU: 34, US_MEN: null, US_WOMEN: null, KIDS: 3 }
+  24: { EU: 24, US_MEN: null, US_WOMEN: null, KIDS: 7.5, FOOT_LENGTH_CM: 15.0 },
+  25: { EU: 25, US_MEN: null, US_WOMEN: null, KIDS: 8, FOOT_LENGTH_CM: 15.5 },
+  26: { EU: 26, US_MEN: null, US_WOMEN: null, KIDS: 9, FOOT_LENGTH_CM: 16.5 },
+  27: { EU: 27, US_MEN: null, US_WOMEN: null, KIDS: 10, FOOT_LENGTH_CM: 17.0 },
+  28: { EU: 28, US_MEN: null, US_WOMEN: null, KIDS: 11, FOOT_LENGTH_CM: 17.5 },
+  29: { EU: 29, US_MEN: null, US_WOMEN: null, KIDS: 11.5, FOOT_LENGTH_CM: 18.0 },
+  30: { EU: 30, US_MEN: null, US_WOMEN: null, KIDS: 12, FOOT_LENGTH_CM: 18.5 },
+  31: { EU: 31, US_MEN: null, US_WOMEN: null, KIDS: 13, FOOT_LENGTH_CM: 19.5 },
+  32: { EU: 32, US_MEN: null, US_WOMEN: null, KIDS: 1, FOOT_LENGTH_CM: 20.0 },
+  33: { EU: 33, US_MEN: null, US_WOMEN: null, KIDS: 2, FOOT_LENGTH_CM: 20.5 },
+  34: { EU: 34, US_MEN: null, US_WOMEN: null, KIDS: 3, FOOT_LENGTH_CM: 21.5 }
 }
 
-// Available size arrays
-export const SHOE_SIZES_EU = [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48]
-export const SHOE_SIZES_US_MEN = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-export const SHOE_SIZES_US_WOMEN = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+// Available size arrays (including half sizes)
+export const SHOE_SIZES_EU = [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 35.5, 36, 36.5, 37, 37.5, 38, 38.5, 39, 40, 40.5, 41, 42, 42.5, 43, 44, 44.5, 45, 45.5, 46, 47, 47.5, 48, 48.5, 49]
+export const SHOE_SIZES_US_MEN = [3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 13, 13.5, 14, 14.5, 15]
+export const SHOE_SIZES_US_WOMEN = [5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 15, 15.5, 16, 16.5, 17]
 export const SHOE_SIZES_KIDS = [7.5, 8, 9, 10, 11, 11.5, 12, 13, 1, 2, 3]
 
 export const APPAREL_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free Size']

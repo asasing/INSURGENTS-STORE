@@ -16,6 +16,7 @@ import {
   SHOE_SIZES_US_WOMEN,
   SHOE_SIZES_KIDS,
   APPAREL_SIZES,
+  SIZE_CONVERSION_TABLE,
   isSizeAvailable as checkSizeAvailability,
   convertFromEU,
   convertToEU,
@@ -370,53 +371,70 @@ export default function ProductDetail() {
                 {/* Size Chart */}
                 {showSizeChart && (
                   <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                    <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">
-                      Size Conversion Chart
+                    <h3 className="font-semibold mb-3 text-gray-900 dark:text-white">
+                      Size Conversion Chart & Measurements
                     </h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                      Foot length measurements based on Nike/Adidas standard sizing
+                    </p>
                     <div className="overflow-x-auto">
-                      <div className="mb-4">
+                      <div className="mb-6">
                         <h4 className="text-sm font-semibold mb-2 text-gray-900 dark:text-white">Adult Sizes</h4>
-                        <table className="w-full text-sm">
+                        <table className="w-full text-xs">
                           <thead>
-                            <tr className="border-b border-gray-300 dark:border-gray-600">
-                              <th className="text-left py-2 text-gray-900 dark:text-white">EU</th>
-                              <th className="text-left py-2 text-gray-900 dark:text-white">US Men</th>
-                              <th className="text-left py-2 text-gray-900 dark:text-white">US Women</th>
+                            <tr className="border-b-2 border-gray-300 dark:border-gray-600">
+                              <th className="text-left py-2 px-2 text-gray-900 dark:text-white">EU</th>
+                              <th className="text-left py-2 px-2 text-gray-900 dark:text-white">US Men</th>
+                              <th className="text-left py-2 px-2 text-gray-900 dark:text-white">US Women</th>
+                              <th className="text-left py-2 px-2 text-gray-900 dark:text-white">Foot Length (cm)</th>
+                              <th className="text-left py-2 px-2 text-gray-900 dark:text-white">Foot Length (in)</th>
                             </tr>
                           </thead>
                           <tbody className="text-gray-700 dark:text-gray-300">
-                            {SHOE_SIZES.EU.map((euSize, index) => (
-                              <tr key={euSize} className="border-b border-gray-200 dark:border-gray-700">
-                                <td className="py-2">{euSize}</td>
-                                <td className="py-2">{SHOE_SIZES.US_MEN[index]}</td>
-                                <td className="py-2">{SHOE_SIZES.US_WOMEN[index]}</td>
-                              </tr>
-                            ))}
+                            {SHOE_SIZES.EU.map((euSize) => {
+                              const sizeData = SIZE_CONVERSION_TABLE[euSize]
+                              const footLengthInches = sizeData?.FOOT_LENGTH_CM
+                                ? (sizeData.FOOT_LENGTH_CM * 0.3937).toFixed(1)
+                                : '-'
+                              return (
+                                <tr key={euSize} className="border-b border-gray-200 dark:border-gray-700">
+                                  <td className="py-2 px-2 font-medium">{euSize}</td>
+                                  <td className="py-2 px-2">{sizeData?.US_MEN || '-'}</td>
+                                  <td className="py-2 px-2">{sizeData?.US_WOMEN || '-'}</td>
+                                  <td className="py-2 px-2">{sizeData?.FOOT_LENGTH_CM ? `${sizeData.FOOT_LENGTH_CM} cm` : '-'}</td>
+                                  <td className="py-2 px-2">{footLengthInches !== '-' ? `${footLengthInches}"` : '-'}</td>
+                                </tr>
+                              )
+                            })}
                           </tbody>
                         </table>
                       </div>
                       <div>
                         <h4 className="text-sm font-semibold mb-2 text-gray-900 dark:text-white">Kids Sizes</h4>
-                        <table className="w-full text-sm">
+                        <table className="w-full text-xs">
                           <thead>
-                            <tr className="border-b border-gray-300 dark:border-gray-600">
-                              <th className="text-left py-2 text-gray-900 dark:text-white">EU</th>
-                              <th className="text-left py-2 text-gray-900 dark:text-white">US Kids</th>
+                            <tr className="border-b-2 border-gray-300 dark:border-gray-600">
+                              <th className="text-left py-2 px-2 text-gray-900 dark:text-white">EU</th>
+                              <th className="text-left py-2 px-2 text-gray-900 dark:text-white">US Kids</th>
+                              <th className="text-left py-2 px-2 text-gray-900 dark:text-white">Foot Length (cm)</th>
+                              <th className="text-left py-2 px-2 text-gray-900 dark:text-white">Foot Length (in)</th>
                             </tr>
                           </thead>
                           <tbody className="text-gray-700 dark:text-gray-300">
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                              <td className="py-2">24-27</td>
-                              <td className="py-2">7.5-10</td>
-                            </tr>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                              <td className="py-2">28-31</td>
-                              <td className="py-2">11-13</td>
-                            </tr>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                              <td className="py-2">32-34</td>
-                              <td className="py-2">1-3</td>
-                            </tr>
+                            {[24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34].map((euSize) => {
+                              const sizeData = SIZE_CONVERSION_TABLE[euSize]
+                              const footLengthInches = sizeData?.FOOT_LENGTH_CM
+                                ? (sizeData.FOOT_LENGTH_CM * 0.3937).toFixed(1)
+                                : '-'
+                              return (
+                                <tr key={euSize} className="border-b border-gray-200 dark:border-gray-700">
+                                  <td className="py-2 px-2 font-medium">{euSize}</td>
+                                  <td className="py-2 px-2">{sizeData?.KIDS || '-'}</td>
+                                  <td className="py-2 px-2">{sizeData?.FOOT_LENGTH_CM ? `${sizeData.FOOT_LENGTH_CM} cm` : '-'}</td>
+                                  <td className="py-2 px-2">{footLengthInches !== '-' ? `${footLengthInches}"` : '-'}</td>
+                                </tr>
+                              )
+                            })}
                           </tbody>
                         </table>
                       </div>
