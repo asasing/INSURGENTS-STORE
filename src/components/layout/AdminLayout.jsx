@@ -108,7 +108,7 @@ export default function AdminLayout({ children }) {
       </aside>
 
       {/* Main Content Area */}
-      <div className="ml-64">
+      <div className="ml-64 min-h-screen flex flex-col">
         {/* Top Bar */}
         <header className="sticky top-0 z-10 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-4">
           <div className="flex items-center justify-between">
@@ -151,7 +151,11 @@ export default function AdminLayout({ children }) {
         </header>
 
         {/* Main Content */}
-        <main className="p-8">{children}</main>
+        <main className="flex-1 p-8 overflow-x-hidden">
+          <div className="max-w-[1600px] mx-auto w-full">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   )

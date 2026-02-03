@@ -35,7 +35,7 @@ export default function Dashboard() {
   ]
 
   return (
-    <div>
+    <div className="w-full">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
         Dashboard
       </h1>
@@ -45,7 +45,7 @@ export default function Dashboard() {
           const Icon = stat.icon
           return (
             <Link key={stat.title} to={stat.link}>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -64,6 +64,24 @@ export default function Dashboard() {
           )
         })}
       </div>
+
+      {/* Analytics Embed Section */}
+      <Card className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          Sales Analytics
+        </h2>
+        <div className="w-full overflow-auto">
+          <div className="relative w-full min-w-[800px]">
+            <iframe
+              src="https://admin@ins.co/"
+              className="w-full border-0 rounded-lg"
+              style={{ height: '800px' }}
+              title="Sales Analytics Dashboard"
+              sandbox="allow-scripts allow-same-origin allow-popups"
+            />
+          </div>
+        </div>
+      </Card>
 
       <Card>
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
